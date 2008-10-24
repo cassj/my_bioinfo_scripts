@@ -266,14 +266,6 @@ bitmap(file="nearest_dist_to_target.png", res=300)
 plot(density(as.numeric(nearest[,"Distance.To.Target"])))
 dev.off()
 
-#this is wierd. Why are there so many 0? Are they intragenic, or unknown?
-foo<-as.numeric(nearest[,"Distance.To.Target"])
-plot(density(as.numeric(nearest[,"Distance.To.Target"])))
-
-
-
-
-
 bitmap(file="nearest_log_dist_to_target.png", res=300)
 plot(density(log10(as.numeric(nearest[,"Distance.To.Target"]))))
 dev.off()
