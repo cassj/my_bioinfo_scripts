@@ -1,0 +1,8 @@
+#!/usr/bin/perl
+
+use File::Path;
+
+use strict;
+use warnings;
+
+File::Path->rmtree("I am not a dir");

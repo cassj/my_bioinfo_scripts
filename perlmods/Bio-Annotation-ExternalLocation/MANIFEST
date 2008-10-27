@@ -1,0 +1,6 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/Bio-Annotation-ExternalLocation.t
+lib/Bio/Annotation/ExternalLocation.pm

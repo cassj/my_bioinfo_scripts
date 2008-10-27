@@ -1,0 +1,6 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/Bio-Annotation-RNAFold-HybridSSMin.t
+lib/Bio/Annotation/RNAFold/HybridSSMin.pm

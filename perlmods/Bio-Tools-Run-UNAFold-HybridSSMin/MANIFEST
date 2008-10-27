@@ -1,0 +1,6 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/Bio-Tools-Run-UNAFold-HybridSSMin.t
+lib/Bio/Tools/Run/UNAFold/HybridSSMin.pm

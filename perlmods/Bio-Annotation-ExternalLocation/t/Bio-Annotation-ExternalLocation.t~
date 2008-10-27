@@ -1,0 +1,64 @@
+# Before `make install' is performed this script should be runnable with
+# `make test'. After `make install' it should work as `perl Bio-Annotation-ExternalLocation.t'
+
+#########################
+
+# change 'tests => 1' to 'tests => last_test_to_print';
+
+use Test::More tests => 15;
+BEGIN { use_ok('Bio::Annotation::ExternalLocation') };
+
+#########################
+
+# Insert your test code below, the Test::More module is use()ed here so read
+# its man page ( perldoc Test::More ) for help writing this test script.
+
+my $loc = Bio::Annotation::ExternalLocation->new();
+isa_ok($loc, 'Bio::Annotation::ExternalLocation');
+
+#RangeI
+can_ok($loc, 'start');
+can_ok($loc, 'end');
+can_ok($loc, 'strand');
+can_ok($loc, 'length');
+
+#AnnotationI
+can_ok($loc, 'as_text');
+can_ok($loc, 'hash_tree');
+can_ok($loc, 'tagname');
+
+#Other Methods
+can_ok($loc, 'authority');
+can_ok($loc, 'taxon');
+can_ok($loc, 'url');
+can_ok($loc, 'coord_sys_type');
+can_ok($loc, 'coord_sys_version');
+can_ok($loc, 'coord_sys_id');
+
+#Note to self - to get an actual taxon obj:
+#use Bio::DB::Taxonomy;
+#my $db = new Bio::DB::Taxonomy(-source => 'entrez');
+#my $taxonid = $db->get_taxonid('Homo sapiens');
+#my $taxon = $db->get_taxon(-taxonid => $taxonid);
+
+#For now we'll mock one up
+
+
+
+##Check setting of stuff at object creation
+#$loc = Bio::Annotation::ExternalLocation->new(
+#		-start             => 1,
+#                -end               => 100,
+#                -strand            => -1,
+#                -taxon             => $taxon,
+#                -authority         => 'NCBI',
+#                -coord_sys_type    => 'chromosome'
+#                -coord_sys_version => 37,
+#                -coord_sys_id      => 'X',
+#                -tagname           => 'MyPos,
+#);
+
+
+
+
+

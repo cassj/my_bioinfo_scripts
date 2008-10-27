@@ -1,0 +1,6 @@
+Revision history for Perl extension Bio::Annotation::ExternalLocation.
+
+0.01  Mon Sep 15 16:18:29 2008
+	- original version; created by h2xs 1.23 with options
+		-XA -n Bio::Annotation::ExternalLocation
+

@@ -1,0 +1,6 @@
+Revision history for Perl extension Bio::Annotation::RNAFold::HybridSSMin.
+
+0.01  Wed Nov 21 10:03:19 2007
+	- original version; created by h2xs 1.23 with options
+		-AXcn Bio::Annotation::RNAFold::HybridSSMin
+
