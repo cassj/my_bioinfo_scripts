@@ -1,0 +1,6 @@
+Revision history for Perl extension Bio::Seq::PrimedSeq::Plus.
+
+0.01  Mon Nov 26 22:19:44 2007
+	- original version; created by h2xs 1.23 with options
+		-XAcn Bio::Seq::PrimedSeq::Plus
+

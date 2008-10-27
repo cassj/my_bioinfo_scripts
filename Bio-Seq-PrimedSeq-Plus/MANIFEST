@@ -1,0 +1,6 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/Bio-Seq-PrimedSeq-Plus.t
+lib/Bio/Seq/PrimedSeq/Plus.pm
