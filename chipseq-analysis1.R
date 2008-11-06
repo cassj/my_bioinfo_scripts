@@ -29,29 +29,88 @@ data<-read.csv("ChIPSeq.csv", skip=1, na.strings='N.A.')
 
 
 #####
-#write a bed file of the locations
+# write a bed file of the locations.
+# am assuming the overlap location approximates the binding site
 #####
 
-write(paste('track name="ChIP-seq TC" description="ChIP-seqTC binding"',"\n"), file="seqs.bed")
+#this seems to confuse liftover
+#write(paste('track name="ChIP-seq TC" description="ChIP-seqTC binding"',"\n"), file="seqs.bed")
 
-tmp<-as.character(data$Cluster.Location)
-chip.seq.targets<-cbind(chr=gsub('(.+):.*','\\1', tmp),
-                       start = gsub('.+:(.+)-.*','\\1', tmp),
-                       end = gsub('.+-(.+)','\\1', tmp),
-                        name = paste('"',as.character(data$Cluster.Location),'"', sep=""),
-                        score = data$Cluster.Overlap.Count
-                        )
+cluster<-as.character(data$Cluster.Location)
+overlap<-as.character(data$Overlap.Location)
+chr <- gsub('(.+):.*','\\1', cluster)
+start <- gsub('(.+)-.*','\\1', overlap)
+end <- gsub('.+-(.+)\\(.+','\\1', overlap)
+peak <- gsub('.+\\((.+)\\)','\\1', overlap)
+name <- paste('"',as.character(data$Overlap.Location),'"', sep="")
+score <- data$Cluster.Overlap.Count
 
-bed<-apply(chip.seq.targets, 1, function(x){
+overlaps<-cbind(chr,start,end,name,score)
+
+overlaps.bed<-apply(overlaps, 1, function(x){
                                    x<-paste(x,collapse=" ");
                                    return(x)
                                  }
            )
-write.table(bed, file="seqs.bed", quote=FALSE,append=TRUE, col.names=FALSE, row.names=FALSE)
+write.table(overlaps.bed, file="beds/overlap_span.bed", quote=FALSE, col.names=FALSE, row.names=FALSE)
+
+
+#can't have a single position in a bed file and having the same
+#start and end fails in liftover. 
+peaks<-cbind(chr,peak,as.numeric(peak)+1,name,score)
+
+peaks.bed<-apply(peaks, 1, function(x){
+                                   x<-paste(x,collapse=" ");
+                                   return(x)
+                                 }
+           )
+write.table(peaks.bed, file="beds/overlap_peak.bed", quote=FALSE, col.names=FALSE, row.names=FALSE)
+
+
+#And now use liftOver to move them to mm9 positions.
+
+
+###
+# Make mart?
+###
+
+#make a mart from the mm9 genome positions?
+
+#in the long term, this is probaly the way to go for integration of
+#TFBS sites and so on, but we can just map the genome positions for now
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ####
-#
+# Original annotation
 ####
 
 left.targets <- unique(as.character(data$Known.Gene.Left.Target))
