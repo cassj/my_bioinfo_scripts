@@ -12,7 +12,8 @@
 use strict;
 use warnings;
 
-use lib 'ensembl47_api/ensembl/modules'; #ensembl classes
+#really?
+#use lib 'ensembl47_api/ensembl/modules'; #ensembl classes
 
 use Data::Dumper; #remove when complete.
 use List::Util qw(min max sum)  ;
@@ -82,8 +83,7 @@ my $species = 'mouse';
 #my $slice_end = 21447036; #end of exon 10
 
 #Mouse Acrv1 (+ve strand)
-my $iden
-tifier = 'ENSMUSG00000032110';
+my $identifier = 'ENSMUSG00000032110';
 my $slice_start = 36500453;
 my $slice_end = 36500890 ;
 

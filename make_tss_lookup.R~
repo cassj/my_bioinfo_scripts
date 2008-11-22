@@ -1,0 +1,57 @@
+####
+# This script uses BiomaRt to generate an SQLite database
+# containing transcription start sites for all of
+# the ensembl known transcripts.
+# Each chromosome gets a separate table, named Chr<whatever>
+# fields are "EnsemblGeneID", "EnsemblTranscriptID" and
+# "TSS". The "EnsemblTranscriptID" is PK and the "TSS" field is
+# indexed
+#
+# The point of this is to make it easy to figure out the nearest
+# tss to a given genome position, for ChIP-seq/chip and similar.
+###
+
+library(biomaRt)
+library(RSQLite)
+
+#for mouse:
+ensembl <- useMart("ensembl_mart_46", dataset="mmusculus_gene_ensembl", archive=TRUE)
+chrs <- c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,'X','Y','MT')
+
+#get everything from the chromosome
+filters <- c('chromosome_name', 'transcript_status')
+attributes <- c('ensembl_transcript_id', 'description', 'ensembl_gene_id', 'transcript_start', 'transcript_end', 'strand', 'chromosome_name')
+
+
+m <- dbDriver("SQLite")
+con <- dbConnect(m, dbname = "MusMusculus_mm8_TSS.db")
+
+for(chr in chrs){
+
+  cat("Generating for chr",chr);
+  
+  values<-list(chr, 'KNOWN')
+  res <- getBM(attributes, filters=filters, values=values, mart=ensembl)
+  tss<-apply(res, 1,
+             function(x){
+               if (x["strand"] == "-1"){
+                 return(as.numeric(x["transcript_end"]))
+               }else{
+                 return(as.numeric(x["transcript_start"]))
+               }
+             }
+             )
+  res<-data.frame('EnsemblGeneID'=res$'ensembl_gene_id', 'EnsemblTranscriptID'=res$'ensembl_transcript_id', 'Description'=res$description, 'TSS'=as.integer(tss), 'Chr' = res$'chromosome_name', 'Strand'=res$strand, 'TranscriptStart'=res$'transcript_start', 'TranscriptEnd' = res$'transcript_end');
+
+  #sort by tss position
+  res<-res[order(tss),]
+
+  dbWriteTable(con, paste("chr",chr, sep=""), res)
+  #create index on tss
+  dbGetQuery(con,paste("CREATE INDEX 'tss_index_",chr,"' ON chr",chr,"('TSS')", sep=""))
+  #and unique key on transript ID
+  dbGetQuery(con,paste("CREATE UNIQUE INDEX 'id_index_",chr,"' ON chr",chr,"('EnsemblTranscriptID')", sep=""))
+
+}
+
+dbDisconnect(con)
