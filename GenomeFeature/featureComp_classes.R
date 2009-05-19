@@ -9,8 +9,9 @@ setClass("featureComp",
                         species="character",
                         genomeFeature="character",
                         compared.to="character",
-                        feature.context="logical",
+                        feature.context="numeric",
                         just.data.2="logical",
+                        notes="character",
                         "VIRTUAL"
                         )
 

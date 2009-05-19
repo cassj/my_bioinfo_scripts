@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 
-=head1 single_primer.pl
+=head1 cdna_primer.pl
 
   This script attempts to automate the Buckley lab
   primer design protocol
@@ -11,8 +11,6 @@
 
 use strict;
 use warnings;
-
-use lib 'ensembl47_api/ensembl/modules'; #ensembl classes
 
 use Data::Dumper; #remove when complete.
 use List::Util qw(min max sum)  ;
@@ -31,32 +29,23 @@ use Bio::Graphics;
 
 my $v = 1;
 
-my $report_file = "single_primer_report.txt";
-my $img_file = "single_img.png";
+my $report_file = "cdna_primer_report.txt";
+my $img_file = "cdna_primer_img.png";
 my $img_size = 800;
 
 my $ignore_masking = 1;
 my $run_blast = 0;
-my $species = 'mouse';
-#my $identifier = 'ENSMUSG00000020932'; #mouse gfap
-#my $identifier = 'ENSMUSG00000033208'; #mouse S100B
-#my $identifier = 'ENSMUSG00000027967'; #mouse ngn2
-#my $identifier = 'ENSMUSG00000005360'; #mouse glast
-#my $identifier = 'ENSMUSG00000031285'; #mouse Dcx
-#my $identifier = 'ENSMUSG00000020396'; #mouse Nefh
-#my $identifier = 'ENSMUSG00000029231'; #mouse PDGFRa
-#my $identifier = 'ENSMUSG00000009471'; #mouse MyoD
-#my $identifier = 'ENSMUSG00000070880'; #mouse GAD1
-#my $identifier = 'ENSMUSG00000030500'; #mouse vGlut2
-#my $identifier = 'ENSMUSG00000026459'; #mouse myogenin
-#my $identifier = 'ENSMUSG00000041607'; #mouse MBP - can't make this work
-#my $identifier = 'ENSMUSG00000021919'; #mouse Chat
-#my $identifier = 'ENSMUSG00000030672'; #mouse myosin
-#my $identifier = 'ENSMUSG00000024411'; #mouse aquaporin
-#my $identifier = 'ENSMUSG00000033059'; #mouse pygb
-my $identifier = 'ENSMUSG00000024176'; #mouse sox8
 
-#slightly over what we'd like, but meh.
+print "Enter the species:\n";
+my $species = <>;
+chomp $species;
+
+
+print "Enter the Ensembl Gene ID:\n";
+my $identifier = <>;
+chomp $identifier;
+
+
 my $min_amplicon = 90;
 my $max_amplicon = 200;
 my $tm_threshold = 70;
@@ -65,28 +54,59 @@ my $tm_threshold = 70;
 # set params as per Manu's protocol:
 # Apparently these are already quite lenient.
 
+#my %primer3_params = (
+#		      PRIMER_OPT_GC_PERCENT     => 60,
+#		      PRIMER_MIN_GC             => 40,
+#		      PRIMER_MAX_GC             => 80,
+#		      PRIMER_PRODUCT_OPT_SIZE   => 120,
+#		      PRIMER_PRODUCT_SIZE_RANGE => $min_amplicon.'-'.$max_amplicon,
+#		      PRIMER_OPT_SIZE           => 20,
+#		      PRIMER_MIN_SIZE           => 18,
+#		      PRIMER_MAX_MISPRIMING     => 12,
+#		      PRIMER_MIN_TM             => 57,
+#		      PRIMER_SELF_ANY           => 4,
+#		      PRIMER_GC_CLAMP           => 0,
+#		      PRIMER_NUM_NS_ACCEPTED    => 0,
+#		      PRIMER_OPT_TM             => 60,
+#		      PRIMER_MAX_POLY_X         => 5,
+#		      PRIMER_SALT_CONC          => 50,
+#		      PRIMER_MAX_TM             => 63,
+#		      PRIMER_SELF_END           => 3,
+#		      PRIMER_MAX_DIFF_TM        => 100,
+#		      PRIMER_MAX_SIZE           => 27,
+#		      PRIMER_NUM_RETURN         => 5
+#		     );
+#
+
+
+
+#Diogo's strict parameters
 my %primer3_params = (
 		      PRIMER_OPT_GC_PERCENT     => 60,
-		      PRIMER_MIN_GC             => 40,
+		      PRIMER_MIN_GC             => 30,
 		      PRIMER_MAX_GC             => 80,
 		      PRIMER_PRODUCT_OPT_SIZE   => 120,
-		      PRIMER_PRODUCT_SIZE_RANGE => $min_amplicon.'-'.$max_amplicon,
+		      PRIMER_PRODUCT_SIZE_RANGE => "$min_amplicon - $max_amplicon",
 		      PRIMER_OPT_SIZE           => 20,
 		      PRIMER_MIN_SIZE           => 18,
 		      PRIMER_MAX_MISPRIMING     => 12,
-		      PRIMER_MIN_TM             => 57,
+		      PRIMER_MIN_TM             => 58,
 		      PRIMER_SELF_ANY           => 4,
 		      PRIMER_GC_CLAMP           => 0,
 		      PRIMER_NUM_NS_ACCEPTED    => 0,
-		      PRIMER_OPT_TM             => 60,
+		      PRIMER_OPT_TM             => 59,
 		      PRIMER_MAX_POLY_X         => 5,
 		      PRIMER_SALT_CONC          => 50,
-		      PRIMER_MAX_TM             => 63,
-		      PRIMER_SELF_END           => 3,
-		      PRIMER_MAX_DIFF_TM        => 100,
+		      PRIMER_MAX_TM             => 60,
+		      PRIMER_SELF_END           => 2,
+		      PRIMER_MAX_DIFF_TM        => 2,
 		      PRIMER_MAX_SIZE           => 27,
 		      PRIMER_NUM_RETURN         => 5
 		     );
+
+
+
+
 
 
 #Again, as per Manu's protocol
@@ -176,8 +196,7 @@ if ($n>1){
       print "\t".$e->stable_id.' '.$e->start.'-'.$e->end."\n";
     }
   }
-  print "\nP
-lease enter the ID of the transcript you would like to use: ";
+  print "\nPlease enter the ID of the transcript you would like to use: ";
   
   $trsc = <STDIN>;
   chomp($trsc);

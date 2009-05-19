@@ -304,6 +304,7 @@ sub run{
 }
 
 ##### TEMP SOLUTION : THIS NEEDS COMPLETELY RE-DONE
+
 sub _parse_results{
   my ($self, $prefix) = @_;
   
@@ -384,7 +385,6 @@ sub _parse_results{
     close DH or die $!;
     close DG or die $!;
     
-    
     #don't bother plotting unless we've got somewhere to put them
     if ($self->plot_dir){
       
@@ -405,17 +405,19 @@ sub _parse_results{
     }
   }
 
+
   $res =  Bio::Annotation::RNAFold::HybridSSMin->new(
 	args   => $params,
 	temps  => \@temps,
 	dH     => \%dH,
 	dG     => \%dG,
 	dS     => \%dS,
-	img    => $img,
 	Tm     => \%Tm,
 	prefix => $prefix,
        );
   
+  $res->img($img) if $img;
+
   return $res;
 
 

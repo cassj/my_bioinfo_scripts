@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 
-=head1 genomic_primer.pl
+=head1 multi_genomic_primer.pl
 
   Design primers to a specific region of the genome, checking the 
   appropriate strand.
@@ -36,14 +36,19 @@ my $v = 1;
 
 
 my $ignore_masking = 0;
-my $species = 'mouse';
+
+my $input_file = shift @ARGV;
+die "\nUsage:\n\tperl multi_genomic_primers.pl Inputfile\n\n" unless $input_file;
+chomp($input_file);
+
+print "Please enter species\n";
+my $species = <>;
+chomp $species;
 
 my $min_amplicon = 100;
 my $max_amplicon = 150;
 my $window = 100;
 my $tm_threshold =   63;
-
-
 
 
 #Diogo's strict parameters
@@ -90,9 +95,7 @@ my @rm_params =(-species  => $species,
 
 my $img_size = 800;
 
-#ok, now loop through the file designing primers.
-my $input_file = shift @ARGV;
-chomp($input_file);
+
 
 
 #store the settings 
@@ -152,52 +155,54 @@ while(my $this_row = <$input_fh>){
 
   #ditch any quotes.
   $this_row =~ s/\"//g;
-  my ($identifier, $trsc, $description,$TSS, $chr, $strand, $trans_start, $trans_end, $dist,$pos)=split("\t",$this_row);
+  my ($identifier, $chr, $genome_start, $genome_end, $strand, $pval, $probe_start, $probe_end, $genome_mid, $feature_start, $feature_end) = split("\t",$this_row);
+  $chr =~s/chr//;
   
-  warn "Processing for $trsc";
+  warn "Processing for $identifier";
+  my $pos = $genome_mid;
   
   my $slice_start = $pos-$window;
   my $slice_end = $pos+$window;
   
-  my $report_file="Primer_Report_$trsc.txt";
-  my $img_file = "Primer_Image_$trsc.png";
+  my $report_file="Primer_Report_$identifier.txt";
+  my $img_file = "Primer_Image_$identifier.png";
   
   my $report_fh = new IO::File;
   $report_fh->open(">$report_file") or die "Can't open report file $report_file for writing";
   print $report_fh "Primer design for $identifier\n";
   
-  my $gene = $gene_ad->fetch_by_stable_id($identifier);
-  warn "$identifier has conflicting strand info" if $gene->strand != $strand; 
-  
-  # print some info about the gene
-  print $report_fh 'Gene: '.$gene->display_id.' '.$gene->description."retrieved from Ensembl $species database\n" ;
-  print $report_fh "\tChromosome ".$gene->slice->seq_region_name;
-  print $report_fh ' (start: '.$gene->start.' end: '.$gene->end;
-  print $report_fh ' strand: '.$gene->strand.")\n";
-  
-  my @exons = @{$gene->get_all_Exons};
-  print $report_fh "Exons:\n";
-  for (my $i=0; $i<=$#exons; $i++){
-    print $report_fh $exons[$i]->display_id.' : ';
-    print $report_fh $exons[$i]->start.' - '. $exons[$i]->end;
-    print $report_fh "\n";
-  }
-  
-  print $report_fh "\n\nTranscripts";
-  my @transcripts = @{$gene->get_all_Transcripts};
-  if ($#transcripts){
-    foreach my $ts (@transcripts){
-      print $report_fh $ts->display_id.' : ';
-      my @texons = @{$ts->get_all_Exons};
-      print $report_fh join ' ', map {$_->stable_id} @texons;
-      print $report_fh "\n";
-    }
-    print $report_fh "\n\n";
-  }
+#  my $gene = $gene_ad->fetch_by_stable_id($identifier);
+#  warn "$identifier has conflicting strand info" if $gene->strand != $strand; 
+#  
+#  # print some info about the gene
+#  print $report_fh 'Gene: '.$gene->display_id.' '.$gene->description."retrieved from Ensembl $species database\n" ;
+#  print $report_fh "\tChromosome ".$gene->slice->seq_region_name;
+#  print $report_fh ' (start: '.$gene->start.' end: '.$gene->end;
+#  print $report_fh ' strand: '.$gene->strand.")\n";
+#  
+#  my @exons = @{$gene->get_all_Exons};
+#  print $report_fh "Exons:\n";
+#  for (my $i=0; $i<=$#exons; $i++){
+#    print $report_fh $exons[$i]->display_id.' : ';
+#    print $report_fh $exons[$i]->start.' - '. $exons[$i]->end;
+#    print $report_fh "\n";
+#  }
+#  
+#  print $report_fh "\n\nTranscripts";
+#  my @transcripts = @{$gene->get_all_Transcripts};
+#  if ($#transcripts){
+#    foreach my $ts (@transcripts){
+#      print $report_fh $ts->display_id.' : ';
+#      my @texons = @{$ts->get_all_Exons};
+#      print $report_fh join ' ', map {$_->stable_id} @texons;
+#      print $report_fh "\n";
+#    }
+#    print $report_fh "\n\n";
+#  }
   
   #ok, our slice actually needs to be in a specifc region, so:
-  my $slice = $slice_ad->fetch_by_region("chromosome", $gene->slice->seq_region_name, $slice_start, $slice_end);
   
+  my $slice = $slice_ad->fetch_by_region("chromosome", $chr, $slice_start, $slice_end);
   
   my $target_sequence = $slice->seq;
   
@@ -209,7 +214,7 @@ while(my $this_row = <$input_fh>){
   # stick seq in a Bio::Seq
   my $seq = Bio::Seq->new(
 			  -seq => $target_sequence,
-			  -id  => 'promoter_region_of:'.$gene->display_id,
+			  -id  => "Primer_for_$identifier",
 			 );
     
   print $report_fh 'sequence has length '.$seq->length;

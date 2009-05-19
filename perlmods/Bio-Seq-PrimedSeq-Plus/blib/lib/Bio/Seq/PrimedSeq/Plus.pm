@@ -46,9 +46,6 @@ The rest of the documentation details each of the object methods. Internal metho
 
 
 use base 'Bio::Seq::PrimedSeq';
-
-#no, we'll use a local one
-#use Bio::Tools::Run::RemoteBlast;
 use Bio::Tools::Run::UNAFold::HybridSSMin;
     
 

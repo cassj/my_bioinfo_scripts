@@ -47,8 +47,8 @@ The rest of the documentation details each of the object methods. Internal metho
 
 use base 'Bio::Seq::PrimedSeq';
 
-#This is stupid - BLAST is not the right tool. We want BLAT if we want anything at all.
-use Bio::Tools::Run::RemoteBlast;
+#no, we'll use a local one
+#use Bio::Tools::Run::RemoteBlast;
 use Bio::Tools::Run::UNAFold::HybridSSMin;
     
 
@@ -114,8 +114,6 @@ sub mfe_left_primer{
     $left_p->display_id($new_name);
     $hsmin->seq_obj($left_p->seq);
     $self->{mfe_left} = $hsmin->run;
-
-
 
   }
 
@@ -210,6 +208,7 @@ sub mfe_amplicon{
   if (%params){
     
     $self->amp_mfe_params(\%params);
+
 
     #grab an hsmin processor and pass it params
     my $hsmin = Bio::Tools::Run::UNAFold::HybridSSMin->new(%params);

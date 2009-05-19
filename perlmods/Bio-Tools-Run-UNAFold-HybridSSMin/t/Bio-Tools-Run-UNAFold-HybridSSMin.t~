@@ -108,17 +108,17 @@ $hsmin->clear_arguments;
 
 $hsmin->verbose(1);
 
-
 $hsmin->tmin(35);
 $hsmin->tmax(40);
 $hsmin->mfold(1);
 $hsmin->save_tempfiles(1);
+$hsmin->plot_dir('/tmp');
 
 #run the program as melt.pl
 my $res = $hsmin->run;
+$hsmin->cleanup;
 
-
-#try clearing everything and running with defaults
-$hsmin->clear_arguments; 
-$hsmin->save_tempfiles(1);
-$res = $hsmin->run;
+# #try clearing everything and running with defaults
+# $hsmin->clear_arguments;
+# $hsmin->save_tempfiles(1);
+# $res = $hsmin->run;

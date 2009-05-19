@@ -57,10 +57,21 @@ lives_and (sub {$hsmin->maxbp(30), 30}, 'PosInt checking passes OK');
 throws_ok {$hsmin->maxbp(0)} qr/ does not pass /, 'PosInt checking fails OK';
 
 #test PosOrZeroInt checking
+lives_and(sub {is $hsmin->sodium(0.05), 0.05}, 'PosOrZeroFloat checking passes OK' );
+throws_ok {$hsmin->sodium(-3)} qr/ does not pass /, 'PosOrZeroFloat checking fails negative OK';
+throws_ok {$hsmin->sodium("rhubarb")} qr/ does not pass /, 'PosOrZeroFloat checking fails string OK';
+
+#test PosOrZeroFloat checking
 lives_and(sub {is $hsmin->tmin(10), 10 }, 'PosOrZeroInt checking passes OK' );
 throws_ok {$hsmin->tmin(-3)} qr/ does not pass /, 'PosOrZeroInt checking fails negative OK';
 throws_ok {$hsmin->tmin("rhubarb")} qr/ does not pass /, 'PosOrZeroInt checking fails string OK';
 throws_ok {$hsmin->tmin(10.7)} qr/ does not pass /, 'PosOrZeroInt checking fails float OK';
+
+#test NucAc checking
+lives_and(sub {is $hsmin->NA('DNA'), 'DNA' }, 'NucAc DNA checking passes OK' );
+lives_and(sub {is $hsmin->NA('RNA'), 'RNA' }, 'NucAc RNA checking passes OK' );
+throws_ok {$hsmin->NA(-3)} qr/ does not pass /, 'NucAc checking fails not string';
+throws_ok {$hsmin->NA('blahblah')} qr/ does not pass /, 'NucAc checking fails not string';
 
 #test ijk checking
 lives_and( sub {is $hsmin->force('3,10,30'),'3,10,30'}, 'ijk checking passes OK');
@@ -99,7 +110,10 @@ ok($hsmin->has_seq, 'has_seq returns true OK');
 
 
 #try setting some args with arguments.
-$hsmin->arguments(seq_obj=>$seq, constraints=>undef);
+#constraints should be a valid readable filename?
+$hsmin->arguments(seq_obj=>$seq, 
+		  constraints=>undef);
+$hsmin->seq_obj($seq),
 $hsmin->tmin(35);
 $hsmin->tmax(40);
 
@@ -118,7 +132,7 @@ $hsmin->plot_dir('/tmp');
 my $res = $hsmin->run;
 $hsmin->cleanup;
 
-# #try clearing everything and running with defaults
-# $hsmin->clear_arguments;
-# $hsmin->save_tempfiles(1);
-# $res = $hsmin->run;
+#try clearing everything and running with defaults
+$hsmin->clear_arguments;
+$hsmin->save_tempfiles(1);
+$res = $hsmin->run;

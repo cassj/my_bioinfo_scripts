@@ -1,0 +1,18 @@
+
+The file /tmp/A2C7AFYvMt//tmp/A2C7AFYvMt/Internals.pod.pdf can't be found, aborts
+
+The error occurred when executing:
+ at /usr/share/perl/5.8/PDF/Reuse.pm line 1217
+	PDF::Reuse::findGet('/tmp/A2C7AFYvMt//tmp/A2C7AFYvMt/Internals.pod.pdf', '') called at blib/lib/PDF/Reuse.pm (autosplit into blib/lib/auto/PDF/Reuse/analysera.al) line 5596
+	PDF::Reuse::analysera('/tmp/A2C7AFYvMt//tmp/A2C7AFYvMt/Internals.pod.pdf', 1, '') called at blib/lib/PDF/Reuse.pm (autosplit into blib/lib/auto/PDF/Reuse/prDoc.al) line 3302
+	PDF::Reuse::prDoc('/tmp/A2C7AFYvMt//tmp/A2C7AFYvMt/Internals.pod.pdf') called at pdf_cat_manual.pl line 103
+
+Situation when the error occurred
+
+   Bytes written to the current pdf-file,    pos    = 15
+   Object processed, not necessarily written objNr  = 3
+   Current pdf-file,                         utfil  = /tmp/A2C7AFYvMt/Manual.pdf
+   File logging the run,                     runfil = undef
+   Local time                                       = Mon Mar  2 15:44:55 2009
+
+

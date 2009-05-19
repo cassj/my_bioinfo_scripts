@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 
-=head1 angela.pl
+=head1 genomic_primer.pl
 
   Design primers to a specific region of the genome, checking the 
   appropriate strand.
@@ -11,9 +11,6 @@
 
 use strict;
 use warnings;
-
-#really?
-#use lib 'ensembl47_api/ensembl/modules'; #ensembl classes
 
 use Data::Dumper; #remove when complete.
 use List::Util qw(min max sum)  ;
@@ -33,59 +30,36 @@ use Bio::Graphics;
 
 my $v = 1;
 
-my $report_file = "Primer_report.txt";
-my $img_file = "img.png";
+my $report_file = "genomic_primer_report.txt";
+my $img_file = "genomic_primer_img.png";
 my $img_size = 800;
 
 my $ignore_masking = 0;
 my $run_blast = 0;
-my $species = 'mouse';
 
-#Mouse L1(NCAM) (-ve strand)
-#my $identifier = 'ENSMUSG00000031391'; 
-#my $slice_start = 71115192;
-#my $slice_end = 71115592;
-#my $slice_start = 71099117;
-#my $slice_end = 71111500;
+print "Please enter species\n";
+my $species = <>;
+chomp $species;
 
-#Mouse OptimedinA (+ve strand)
-#my $identifier = 'ENSMUSG00000027965';
-#my $slice_start = 114606716;
-#my $slice_end = 114607116;
-#Can't be arsed getting this to search the transcript seq,
-#my $slice_start = 114792999; #exon 2
-#my $slice_end = 114793145;
-#my $slice_start = 114825098; #exon 8
-#my $slice_end = 114827978;
+print "Please enter Ensembl Gene ID\n";
+my $identifier = <>;
+chomp $identifier;
 
-#Mouse Fabp7 (+ve strand)
-#my $identifier = 'ENSMUSG00000019874';
-#my $slice_start = 57504279; #round TSS-250
-#my $slice_end = 57504679;
-#my $slice_start = 57504888; #intron 1
-#my $slice_end = 57505311;
-#my $slice_start = 57507929; #exon 
-#my $slice_end = 57508256;
+print "Please enter start genome coordinate\n";
+my $slice_start = <>;
+chomp $slice_start;
 
-#Mouse Hesx1 (+ve strand)
-#my $identifier = 'ENSMUSG00000040726';
-#my $slice_start = 27813260;
-#my $slice_end = 27813660;
-#my $slice_start = 27814063 ; #intron1-exon2
-#my $slice_end = 27814757;
+print "Please enter end genome coordinate\n";
+my $slice_end = <>;
+chomp $slice_end;
 
 
-#Mouse Brg1 (+ve strand)
-#my $identifier = "ENSMUSG00000032187";
-#my $slice_start =21420113 ; #tss-500
-#my $slice_end = 21421113 ; #tss+500
-#my $slice_start =  21437499; #start of intron 2
-#my $slice_end = 21447036; #end of exon 10
 
-#Mouse Acrv1 (+ve strand)
-my $identifier = 'ENSMUSG00000032110';
-my $slice_start = 36500453;
-my $slice_end = 36500890 ;
+#my $identifier = 'ENSMUSG00000032110';
+#my $slice_start = 36500453;
+#my $slice_end = 36500890 ;
+
+
 
 my $min_amplicon = 100;
 my $max_amplicon = 150;
@@ -95,8 +69,6 @@ my $tm_threshold =   65;
 
 
 # set params as per Manu's protocol:
-# Apparently these are already quite lenient.
-
 my %primer3_params = (
 #		      PRIMER_MISPRIMING_LIBRARY => 'repbase/humrep.ref',
 		      PRIMER_OPT_GC_PERCENT     => 60,
@@ -131,17 +103,6 @@ my %mfe_params = (
 		  magnesium => 0.003,
 );
 
-
-#defaults are reasonable in PrimedSeqPlus
-#you do need to specify an e value though
-#
-# blast really isn't what we want for this. we're
-# looking for identical matches, surely?
-# although actually, we only really care if the 3' e
-# nd match is exact.
-my %blast_params=(
-  '-expect' => 1000,
-);
 
 my @rm_params=(-species  => $species,
 	       -nolow    => 1,
@@ -421,9 +382,8 @@ foreach (@amps) {
     $best_primer = $this_one;
   }
 }
-#
-#
-#
+
+
 ####
 ## draw the primers along the sequence?
 ###
@@ -443,16 +403,11 @@ my $full_length = Bio::SeqFeature::Generic->new(
                                                 -end   => $seq->length,
                                                );
 
-#make tss feature
-
-
 #at this stage, tss is still relative to the genomic +1 seq.
 #shift to 1..$seq->length frame
 $tss = $strand == 1 ?
   $tss - $slice->start + 1:
   $slice->end - $tss + 1;
-
-
 
 $tss = Bio::SeqFeature::Generic->new(
 				     -start => $tss,
@@ -465,19 +420,6 @@ $panel->add_track($tss,
 		  -label   => 'First TSS',
 );
 
-
-
-#for acrv1
-my $acrv1_track = $panel->add_track(
-				    Bio::SeqFeature::Generic->new
-				    (
-				     -start => 36500653-$slice->start,
-				     -end   => $slice->end - 36500690,
-				    ),
-				    '-glyph'   => 'diamond',
-				    '-bgcolor' => 'red',
-				    '-label'   => 'Binding site',
-				   );
 
 
 $panel->add_track($full_length,
@@ -510,6 +452,8 @@ if ($#masked_feats){
 }
 
 #this draws all the primers underneath
+#why is it not drawing anything? I know I have primerss
+use Data::Dumper;
 my @primed_seqs = map {$_->annotated_sequence} values %primers;
 my $track3 = $panel->add_track(\@primed_seqs,
 			       -glyph => 'segments',
@@ -524,11 +468,6 @@ open FILE, ">$img_file" or die "can't open image file";
 print FILE $panel->png;
 close FILE;
 
-
-
-# Generate blast results. I'm not sure quite what one is supposed
-# to glean from these - we're already avoiding repetitive regions
-# the chances of mispriming are slim. 
 
 #print their sequences out:
 print REPORT "\n\n\n SELECTED AMPLICONS\n\n";
@@ -548,19 +487,19 @@ print REPORT "Right primer Mfold Tm: ".$best_primer->mfe_right_primer->Tm->{60}.
 print REPORT "Right primer Mfold dG: ".$best_primer->mfe_right_primer->dG->{60}."\n";
 
 
-if ($run_blast){
-  my $left = $best_primer->blast_left_primer(run=>1,%blast_params);
-  my $right = $best_primer->blast_right_primer(run=>1,%blast_params);
-  
-  print REPORT "Left primer BLAST results:\n\t".$best_primer->left_blast_rid."\n";
-  print REPORT "Right primer BLAST results: \n\t".$best_primer->right_blast_rid."\n";
-  
- # #check for problems (not implemented yet)
-  # warn "CONFLICT WARNING: Both primers hit the same non-target site" if 
-  #   $node->blast_conflicts;
-  #
-  #  die;
-}
-
+#if ($run_blast){
+#  my $left = $best_primer->blast_left_primer(run=>1,%blast_params);
+#  my $right = $best_primer->blast_right_primer(run=>1,%blast_params);
+#  
+#  print REPORT "Left primer BLAST results:\n\t".$best_primer->left_blast_rid."\n";
+#  print REPORT "Right primer BLAST results: \n\t".$best_primer->right_blast_rid."\n";
+#  
+# # #check for problems (not implemented yet)
+#  # warn "CONFLICT WARNING: Both primers hit the same non-target site" if 
+#  #   $node->blast_conflicts;
+#  #
+#  #  die;
+#}
+#
 close REPORT or die "Can't close report file $report_file";
 

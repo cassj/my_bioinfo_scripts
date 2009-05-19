@@ -1,6 +1,14 @@
 require(RSQLite)
 
-#note to self: NAMESPACES????
+### TODO:
+#when creating databases of gFs, if a chr has been investigated and no
+#features have been found on it, then it should get an empty table
+#in the database
+#
+#Also in the get.nearest &c functions, we need to deal with the case of
+#a chromosome not being in the database - ie not having been investigated,
+#
+# actually - this will all be resolved in postgres. 
 
 
 #we're likely to have to deal with large lists of
@@ -78,6 +86,7 @@ setMethod("initialize",
             if(!('GenomeMid' %in% nms)){
               GenomeMid <- apply(cbind(features[,"GenomeStart"],
                                        features[,"GenomeEnd"]), 1,mean)
+              GenomeMid <- round(GenomeMid)
               features <- cbind(features, GenomeMid=GenomeMid)
             }
             
@@ -102,7 +111,7 @@ setMethod("initialize",
 
             #force chr to be char,  not factor
             features[,"Chr"]<-as.character(features[,"Chr"])            
-            features[,"ID"]<- as.character(features[,"ID"])
+            features[,feature.id.field]<- as.character(features[,feature.id.field])
             
             .Object@features <- features
             .Object@data.source <- data.source
@@ -128,11 +137,13 @@ gF <- genomeFeature <- function(...){
 }
 
 #constructor from bed file
+#name arg overrides header name
 gF.from.bed <-genomeFeature.from.bed <- function(filename=NULL,
                                                  head=TRUE,
                                                  sep=" ",
-                                                 data.source="",
+                                                 description="",
                                                  notes="",
+                                                 name = "",
                                                  ...){
   if(is.null(filename)){
     stop("No filename given")
@@ -143,8 +154,8 @@ gF.from.bed <-genomeFeature.from.bed <- function(filename=NULL,
       header <- readLines(filename, n=1)
       if(notes == ""){
         notes <- paste("BED Header:", header, sep=" ")
-        name <- gsub('.*name=[\',"]?(\\w+)\\S.*','\\1',header, perl=TRUE)
-        description <- gsub('.*description=[\',"](.*)[\',"].*','\\1',header, perl=TRUE)
+        if (name=="") {name <- gsub('.*name=[\',"]?(\\w+)\\S.*','\\1',header, perl=TRUE)}
+        if(description==""){description <- gsub('.*description=[\',"](.*)[\',"].*','\\1',header, perl=TRUE)}
       }
       skip=1
     }
@@ -158,6 +169,39 @@ gF.from.bed <-genomeFeature.from.bed <- function(filename=NULL,
   
   new ("genomeFeature", features=bed, data.source=filename, notes=notes, name=name, description=description, ...)
 }
+
+
+#constructor from database
+gF.from.db <-genomeFeature.from.db <- function(filename=NULL,
+                                               data.source="",
+                                               notes="",
+                                               name="",
+                                               description="",
+                                               ...){
+  if(is.null(filename)){
+    stop("No filename given")
+  }
+  else{
+    if(name != ""){name=filename}
+    m <- dbDriver("SQLite")
+    con <- dbConnect(m, dbname = filename)
+    tables <- dbListTables(con)
+    data=NULL
+    for (table in tables){
+      these <-  dbGetQuery(con,paste("SELECT * FROM ",table, sep=""));
+      if(!is.null(data)){ data <- rbind(data, these)}
+      else{data <- these}
+    } 
+  }
+  
+  new ("genomeFeature", features=data, data.source=filename, notes=notes, name=name, description=description, ...)
+}
+
+
+
+
+
+
 
 
 
@@ -300,6 +344,7 @@ if (!isGeneric("make.feature.db")) {
      setGeneric("make.feature.db", fun)
 }
 
+#Note to self: need to fix this to take into account the possibility of missing chrms
 
 setMethod("make.feature.db", "genomeFeature",
           
@@ -352,7 +397,7 @@ setMethod("make.feature.db", "genomeFeature",
 if (!isGeneric("get.nearest")) {
      if (is.function("get.nearest"))
        fun <- get.nearest
-     else fun <- function(object, compare.to, field.1="GenomeMid", field.2="GenomeMid",n=1, feature.context=FALSE, just.data.2=FALSE ) standardGeneric("get.nearest")
+     else fun <- function(object, compare.to, field.1="GenomeMid", field.2="GenomeMid",n=1, feature.context=0, just.data.2=FALSE, same.strand=TRUE ) standardGeneric("get.nearest")
      setGeneric("get.nearest", fun)
 }
 
@@ -360,7 +405,7 @@ if (!isGeneric("get.nearest")) {
 ##if compare.to is a genomeFeature, make a tmp db and use that
 #will implement in just R later.
 setMethod("get.nearest", c("genomeFeature", "genomeFeature"),
-          function(object, compare.to, field.1="GenomeMid", field.2="GenomeMid", n=1, feature.context=FALSE, just.data.2=FALSE){
+          function(object, compare.to, field.1="GenomeMid", field.2="GenomeMid", n=1, feature.context=0, just.data.2=FALSE, same.strand=TRUE){
             filename=tempfile()
             make.feature.db(compare.to, filename=filename)
             get.nearest(object, compare.to=filename,field.1=field.1, field.2=field.2, n=n, feature.context=feature.context, just.data.2=just.data.2 )
@@ -371,38 +416,60 @@ setMethod("get.nearest", c("genomeFeature", "genomeFeature"),
 #and if compere.to is character, interpret as db filename
 setMethod("get.nearest", c("genomeFeature","character"),
           
-   function(object, compare.to, field.1="GenomeMid", field.2="GenomeMid", n=1, feature.context=FALSE, just.data.2=FALSE){
+          function(object, compare.to, field.1="GenomeMid", field.2="GenomeMid", n=1, feature.context=0, just.data.2=FALSE, same.strand=TRUE){
+            
+                                        #note to self- this would be much better if we used SQlite's
+                                        #spatialite thing.
+            m <- dbDriver("SQLite")
+            con <- dbConnect(m, dbname = compare.to)
+            
+            feats <- features(object)
+            chr <- as.character(feats[,"Chr"])
+            pos <- as.character(feats[,field.1])
+            res <- data.frame()
+            colnames(feats) <- paste("feat.", colnames(feats), sep="")
+            strand <- feats[,"feat.Strand"]
+            
+            
+            for(i in 1:nrow(feats)){
+              cat(i,"\n");
+              
+              nearest<-NA
+              these <- feats[i,]
+              
+              if (dbExistsTable(con, chr[i])){
+                if (same.strand & feats[i,"feat.Strand"]!=0){
+                  q <- paste('select ', chr[i],'.*, abs("',field.2,'"-',pos[i],') as Distance from ',chr[i],' where Strand=0 or Strand=',strand[i],' order by Distance asc limit ',n, sep="")
+                }else{
+                  q <- paste('select ', chr[i],'.*, abs("',field.2,'"-',pos[i],') as Distance from ',chr[i],' order by Distance asc limit ',n, sep="")
+                }
+                nearest <- dbGetQuery(con,q)
+              }else{
 
-      m <- dbDriver("SQLite")
-      con <- dbConnect(m, dbname = compare.to)
-      
-      feats <- features(object)
-      chr <- as.character(feats[,"Chr"])
-      pos <- as.character(feats[,field.1])
-      res <- data.frame()
-      colnames(feats) <- paste("feat.", colnames(feats), sep="")
-
-      
-      for(i in 1:nrow(feats)){
-        q <- paste('select ', chr[i],'.*, abs("',field.2,'"-',pos[i],') as Distance from ',chr[i],' order by Distance asc limit ',n, sep="")
-        nearest <- dbGetQuery(con,q)
-        nearest <- cbind(nearest[,-1]) #get rid of the row.names
-        if(nrow(nearest)==0){next()}
-        colnames(nearest)<-paste("nearest.",colnames(nearest), sep="")
-
-        these <- feats[i,]
-
-        data<-parse.nearest(these,
-                            nearest,
-                            paste("feat.", field.1, sep=""),
-                            paste("nearest.", field.2, sep=""),
-                            feature.context,
-                            just.data.2)
-        res<-rbind(res, data )
-      }
-      
-      dbDisconnect(con)
-      
+                q <- paste('select chr1.*, abs(\"FeatureStart\") as Distance from chr1 limit 1', sep="")
+                nearest <- dbGetQuery(con,q)
+                nearest[1:length(nearest)] <- NA
+              }
+              
+              nearest <- cbind(nearest[,-1]) #get rid of the row.names
+              if(nrow(nearest)==0){next()}
+              colnames(nearest)<-paste("nearest.",colnames(nearest), sep="")
+              
+              data<-parse.nearest(these,
+                                  nearest,
+                                  paste("feat.", field.1, sep=""),
+                                  paste("nearest.", field.2, sep=""),
+                                  feature.context,
+                                  just.data.2,
+                                  same.strand)
+              
+              
+              res<-rbind(res, data )
+              
+            }
+            
+            dbDisconnect(con)
+            
                                         #create a comparison obj
       res<-nF(data=res,
               species=species(object),
@@ -412,42 +479,77 @@ setMethod("get.nearest", c("genomeFeature","character"),
               just.data.2=just.data.2,
               field.1=field.1,
               field.2=field.2)
-      return(res)
-    })
-          
+            return(res)
+          })
 
 
-parse.nearest <- function(these, nearest, field.1, field.2, feature.context, just.data.2){
-  
-  if(nrow(nearest)>1){
-    these<-t(replicate(nrow(nearest),these))
-  }
 
-                                        #set orientation on +ve strand
-  up.ids<-which(nearest[,field.2] <= these[,field.1])
-  down.ids<-which(nearest[,field.2] > these[,field.1])
+parse.nearest <- function(these, nearest, field.1, field.2, feature.context, just.data.2, same.strand){
+
   
-  orientation<-rep('UP',nrow(nearest))
-  orientation[down.ids]<-"DOWN"
   
-                                        #and invert -ve strand features if requested
-  if(feature.context){
-    neg<-which(these[,"feat.Strand"]==-1)
-    orientation[intersect(down.ids,neg)]="UP"
+    if(nrow(nearest)>1){
+      for(i in 2:nrow(nearest)){
+        these <- rbind(these,these[1,])
+      }
+    }
+    
+    
+    if (feature.context == 0){
+      data <- nearest
+    }
+    
+                                        #if feature.context=1, context is feature & feature strand
+                                        #if feature strand is 0, use top strand (NOT nearest strand)
+    if(feature.context==1){
+      down.ids<-which(nearest[,field.2] <= these[,field.1])
+      up.ids<-which(nearest[,field.2] > these[,field.1])
+      
+      orientation<-rep('UP',nrow(nearest))
+      orientation[down.ids]<-"DOWN"
+                                        #and invert -ve strand features 
+      neg<-which(these[,"feat.Strand"]==-1)
+      orientation[intersect(down.ids,neg)]="UP"
+      orientation[intersect(up.ids, neg)]="DOWN"
+    
+      opp <- intersect(nearest[,"nearest.Strand"]!=0, intersect(these[,"feat.Strand"]!=0, these[,"feat.Strand"]!=nearest[,"nearest.Strand"]))
+      orientation[opp] <- paste(orientation[opp], "OPP", sep=".")
+      data <- cbind(nearest, orientation)
+      
+    }
+                                        #if feature.context=2, context is nearest & nearest strand
+                                        #if nearest strand is 0, use top strand (NOT feature strand)
+    if(feature.context==2){
+      up.ids<-which(nearest[,field.2] > these[,field.1])
+      down.ids<-which(nearest[,field.2] <= these[,field.1])
+      
+      orientation<-rep('UP',nrow(nearest))
+      orientation[down.ids]<-"DOWN"
+                                        #and invert -ve strand features 
+      neg<-which(nearest[,"nearest.Strand"]==-1)
+      orientation[intersect(down.ids,neg)]="UP"
     orientation[intersect(up.ids, neg)]="DOWN"
-  }
-
-
-  data <- cbind(nearest, orientation)
+      
+    
+      opp <- intersect(these[,"feat.Strand"]!=0, intersect(nearest[,"nearest.Strand"]!=0, these[,"feat.Strand"]!=nearest[,"nearest.Strand"]))
+      orientation[opp] <- paste(orientation[opp], "OPP", sep=".")
+      
+      data <- cbind(nearest, orientation)
+    }
+  
   if(!just.data.2){ data <- cbind(these, data)}
+  
 }
+
+
+
 
 
 
 #basically the same as get.nearest, returns an object of class featureNearest, but
 #returns n features up- and n features down- stream
 
-
+# fix this to work with new parse.nearest
 if (!isGeneric("get.flanking")) {
      if (is.function("get.flanking"))
        fun <- get.flanking
@@ -532,6 +634,8 @@ setMethod("get.flanking", c("genomeFeature","character"),
 
 
 #Output as a bed file
+
+#Need to have a think about how we deal with IDs. 
 if (!isGeneric("make.bed")) {
      if (is.function("make.bed"))
        fun <- make.bed
@@ -558,6 +662,15 @@ setMethod("make.bed", "genomeFeature",
      }else{
        mat <- object@features[,c("Chr", "GenomeStart","GenomeEnd")]
      }
+
+     #make the ID chr_start_end
+    if (!is.null(object@feature.id.field)){
+      feat.ids <-  object@features[,c(object@feature.id.field)]
+    }else{
+      feat.ids <- paste(mat[,1],mat[,2],mat[,3], sep="_")
+    }
+      
+     mat <- cbind(mat,feat.ids)
      write.table(mat, file=filename, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
      
    }
@@ -578,18 +691,19 @@ setMethod("make.bed", "genomeFeature",
 # down bases downstream of the features in object. Setting up and down =0
 # (the default) gets overlapping features.
 # up and down are by default interpreted in the genome (+ve strand) context
-# setting feature.context will mean they are interpreted in the context of
-# the feature strand
-
-# in this case, we don't need to decide a feature to be closest to.
-# If feature.context is FALSE, we use GenomeStart-up to GenomeEnd+down
-# if true, we convert up and down to feature strand context and use
-# FeatureStart and FeatureEnd 
+# (feature.context=0) using GenomeStart and GenomeEnd positions for ref
+# setting feature.context to 1 will mean they are interpreted in the context of
+# the feature strand, using FeatureStart and FeatureEnd as a reference
+# Unlike get.nearest, feature.context=2 is meaningless.
+# if same.strand=TRUE, then only features on the same strand will be retrieved.
+# If feature strand is 0 then genome context will be used regardless of the
+# settings for feature.context and same.strand will be ignored
+# similarly, if same.strand=TRUE, found features with strand=0 will be accepted
 
 if (!isGeneric("get.within")) {
      if (is.function("get.within"))
        fun <- get.within
-     else fun <- function(object, compare.to, feature.context=FALSE, just.data.2=FALSE, up=0, down=0 ) standardGeneric("get.within")
+     else fun <- function(object, compare.to, feature.context=0, just.data.2=FALSE, up=0, down=0, same.strand=TRUE ) standardGeneric("get.within")
      setGeneric("get.within", fun)
 }
 
@@ -597,15 +711,15 @@ if (!isGeneric("get.within")) {
 
 #for now, if we get a genomeFeature, make a DB of it and use that
 setMethod("get.within", c("genomeFeature", "genomeFeature"),
-          function(object, compare.to, feature.context=FALSE, just.data.2=FALSE, up=0, down=0){
+          function(object, compare.to, feature.context=0, just.data.2=FALSE, up=0, down=0, same.strand=TRUE){
             filename=tempfile()
             make.feature.db(compare.to, filename=filename)
-            get.within(object, compare.to=filename, feature.context=feature.context, just.data.2=just.data.2, up=up, down=down )
+            get.within(object, compare.to=filename, feature.context=feature.context, just.data.2=just.data.2, up=up, down=down, same.strand=same.strand )
             
           })
 
 setMethod("get.within", c("genomeFeature","character"),
-          function(object, compare.to, feature.context=FALSE, just.data.2=FALSE, up=0, down=0 ){
+          function(object, compare.to, feature.context=0, just.data.2=FALSE, up=0, down=0, same.strand=TRUE ){
 
             m <- dbDriver("SQLite")
             con <- dbConnect(m, dbname = compare.to)
@@ -616,15 +730,19 @@ setMethod("get.within", c("genomeFeature","character"),
             strand <- as.numeric(feats[,"Strand"])
             start<-feats[,'GenomeStart']-up
             end <- feats[,'GenomeEnd']+down
-           
+            res <- data.frame()
             colnames(feats) <- paste("feat.", colnames(feats), sep="")
 
-            
             for(i in 1:nrow(feats)){
-              
-              q1<-paste('select ', chr[i],'.* from ', chr[i], ' where GenomeStart >',start[i],' and GenomeEnd < ',end[i], sep="")
-              q2<-paste('select ', chr[i],'.* from ', chr[i], ' where GenomeEnd >',start[i],' and GenomeStart < ',end[i], sep="")
-
+              cat(i, 'of', nrow(feats), "\n")
+              if(same.strand & feats[i,"feat.Strand"]!=0){
+                q1<-paste('select ', chr[i],'.* from ', chr[i], ' where GenomeStart >',start[i],' and GenomeEnd < ',end[i],, 'and (Strand=0 or Strand=',strand[i], ')', sep="")
+                q2<-paste('select ', chr[i],'.* from ', chr[i], ' where GenomeEnd >',start[i],' and GenomeStart < ',end[i],,' and (Strand=0 or Strand=',strand[i], ')',  sep="")
+                
+              }else{
+                q1<-paste('select ', chr[i],'.* from ', chr[i], ' where GenomeStart >',start[i],' and GenomeEnd < ',end[i], sep="")
+                q2<-paste('select ', chr[i],'.* from ', chr[i], ' where GenomeEnd >',start[i],' and GenomeStart < ',end[i], sep="")
+              }
 
               ol1 <- dbGetQuery(con, q1)
               ol2 <- dbGetQuery(con, q2)
@@ -634,19 +752,16 @@ setMethod("get.within", c("genomeFeature","character"),
               if(nrow(overlapping)==0){next()}
               colnames(overlapping)<-paste("overlapping.",colnames(overlapping), sep="")
               these <- feats[i,]
-
-
+               
               if(nrow(overlapping)>1){
-                these<-t(replicate(nrow(overlapping),these))
+                for(i in 2:nrow(overlapping)){
+                  these <- rbind(these,these[1,])
+                }
               }
-
-              if(!just.data.2){ overlapping <- cbind(these, overlapping)}
-
-              
-              res<-rbind(res, overlapping )
-              
+              these <- cbind(these,overlapping)
+              res<-rbind(res, these)
             }
-            
+
             
             dbDisconnect(con)
             
@@ -669,3 +784,223 @@ setMethod("get.within", c("genomeFeature","character"),
 
 
 
+#### just some useful functions (not methods) ###
+
+# you need to use biomaRt to create an ensmart
+
+# ensmart <- useMart('ensembl_mart_46',
+#                     dataset="mmusculus_gene_ensembl",
+#                     archive=TRUE)
+#
+# and nearest should be the result of calling the get.nearest
+# method with an ensembl_transcript database.
+
+get.ensembl.transcript.context <- function(nearest, ensmart){
+
+
+  #change this when you've got some accessor methods
+  nearest <- nearest@data
+  exon <- utr <- intron <- as.character(rep(NA,nrow(nearest)))
+
+  #only need context for intragenic features:
+  intra.ids <- which( ( nearest$feat.GenomeMid > nearest$nearest.GenomeStart )
+                      & ( nearest$feat.GenomeMid<nearest$nearest.GenomeEnd ) )
+
+  
+  #ok, grab those transcripts from ensembl.
+  filters <- c('ensembl_gene_id')
+  values <- nearest[intra.ids,"nearest.EnsemblGeneID"]
+  attributes <- c(
+                  'sequence_exon_stable_id',
+                  'structure_exon_chrom_start',
+                  'structure_exon_chrom_end',
+                  'structure_exon_rank',
+                  'sequence_exon_chrom_strand',
+                  'sequence_3utr_start',
+                  'sequence_3utr_end',
+                  'sequence_5utr_start',
+                  'sequence_5utr_end',
+                  'ensembl_transcript_id',
+                  'ensembl_gene_id'
+                 )
+
+  
+#  #above doesn't work for mm8.
+#  attributes<-c('sequence_exon_stable_id',
+#                'sequence_exon_chrom_start',
+#                'sequence_exon_chrom_end',
+#                'rank',
+#                'sequence_exon_chrom_strand',
+#                '3_utr_start',
+#                '3_utr_end',
+#                '5_utr_start',
+#                '5_utr_end',
+#                'ensembl_transcript_id',
+#                'ensembl_gene_id'
+#                )
+
+  res <- getBM(attributes, filters=filters, values=values, mart=ensmart)
+
+  n<-0
+  len<-length(intra.ids)
+  #ok, now for each transcript ID in intra.ids, check where the genome pos is
+  for(i in intra.ids){
+    cat(i,"\n")
+    n<-n+1
+    cat(n,'of',len,"\n" )
+    ts<-nearest$nearest.EnsemblGeneID[i]
+    these <- res[res$'ensembl_gene_id'== ts,]
+    pos <- nearest$feat.GenomeMid[i]
+    start.ok <- which(these$'exon_chrom_start'<=pos)
+    end.ok <- which(these$'exon_chrom_end'>= pos)
+    ex <- intersect(start.ok, end.ok)
+    
+    if(length(ex)!=0){
+                                           #exonic,
+      exon[i] <- paste(these[ex,'sequence_exon_stable_id'],' (' ,these[ex,'structure_exon_rank'], ')',sep="")
+                                        #see if it's in the utr
+      if(!is.na(these[ex, 'sequence_3utr_start'])){
+        if(pos>=these[ex, 'sequence_3utr_start'] & pos<=these[ex, 'sequence_3utr_end']){
+          utr[i] <- 3
+        }
+      }
+      if(!is.na(these[ex, 'sequence_5utr_start'])){
+        if(!is.na(these[ex, 'sequence_5utr_start'])){
+          if(pos>=these[ex, 'sequence_5utr_start'] & pos<=these[ex, 'sequence_5utr_end']){
+            utr[i] <- 5
+          }
+        }
+      }
+    } else{
+                                        #intronic, where is it?
+      start <- these[max(start.ok),]
+      end <- these[min(end.ok),]
+      if(start$rank>end$rank){
+        intron[i] <- paste(end$'sequence_exon_stable_id',' (',end$rank,') - ',start$'sequence_exon_stable_id',' (',start$rank,')',sep="")
+      }else{
+        intron[i] <- paste(start$'sequence_exon_stable_id',' (',start$rank,') - ',end$'sequence_exon_stable_id',' (',end$rank,')',sep="")
+      }
+      
+    }#else
+    
+  }#for
+
+  return(data.frame(nearest, exon=exon, intron=intron, utr=utr))
+}
+
+#intra.ids[8] is exonic  
+
+
+
+get.ensembl.gene.context <- function(nearest, ensmart){
+
+  #change this when you've got some accessor methods
+  nearest <- nearest@data
+  exon  <- intron <- as.character(rep(NA,nrow(nearest)))
+
+  #we'll set these to NA later.
+  utr <- rep('',nrow(nearest))
+  
+  #only need context for intragenic features:
+  intra.ids <- which( ( nearest$feat.GenomeMid > nearest$nearest.GenomeStart )
+                      & ( nearest$feat.GenomeMid<nearest$nearest.GenomeEnd ) )
+
+  
+  #ok, grab those transcripts from ensembl.
+  filters <- c('ensembl_gene_id')
+  values <- nearest[intra.ids,"nearest.EnsemblGeneID"]
+
+  attributes <- c(
+                  'sequence_exon_stable_id',
+                  'structure_exon_chrom_start',
+                  'structure_exon_chrom_end',
+                  'structure_exon_rank',
+                  'sequence_exon_chrom_strand',
+                  'sequence_3utr_start',
+                  'sequence_3utr_end',
+                  'sequence_5utr_start',
+                  'sequence_5utr_end',
+                  'ensembl_gene_id'
+                 )
+
+  
+#  attributes<-c('sequence_exon_stable_id',
+#                'sequence_exon_chrom_start',
+#                'sequence_exon_chrom_end',
+#                'rank',
+#                'sequence_exon_chrom_strand',
+#                '3_utr_start',
+#                '3_utr_end',
+#                '5_utr_start',
+#                '5_utr_end',
+#                'ensembl_gene_id',
+#                )
+
+  res <- getBM(attributes, filters=filters, values=values, mart=ensmart)
+
+  n<-0
+  len<-length(intra.ids)
+  
+
+  for(i in intra.ids){
+    cat(i,"\n")
+    n<-n+1
+    cat(n,'of',len,"\n" )
+    ts<-nearest$nearest.EnsemblGeneID[i]
+    these <- res[res$'ensembl_gene_id'== ts,]
+    pos <- nearest$feat.GenomeMid[i]
+    start.ok <- which(these$'exon_chrom_start'<=pos)
+    end.ok <- which(these$'exon_chrom_end'>= pos)
+    ex <- intersect(start.ok, end.ok)
+    strand <- these$'exon_chrom_strand'[1]
+    
+    if(length(ex)!=0){
+      
+      #exonic, list all exons in which it appears
+      exon[i] <- paste(these[ex,'exon_stable_id'],' (' ,these[ex,'rank'], ')',sep="", collapse=", ")
+                                        #see if it's in the utr
+      these.ex <- these[ex,]
+      for (r in 1:nrow(these.ex)){
+        this.utr <- 'NA'
+        if(!is.na(these.ex[r,'3utr_start']) &
+           pos>=these.ex[r, '3utr_start'] &
+           pos<=these.ex[r, '3utr_end']){
+          this.utr <- '3'
+        }
+        if(!is.na(these.ex[r, '5utr_start']) &
+           pos>=these.ex[r, '5utr_start'] &
+           pos<=these.ex[r, '5utr_end']){
+          this.utr <- '5'
+        }
+        
+        if(utr[i]==""){utr[i] <- this.utr} else {utr[i] <- paste(utr[i],this.utr,sep=", ")}
+        
+    }#for
+
+      
+  } else{
+
+    #this is going to be more complicated than I thought
+    #because what we get back is the total set of exons from
+    #all transcripts of the gene (with dups removed)
+    #the ranks of the exons may differ between transcripts
+    #just make a note of whether it's in the first intron
+    #for now and fix properly later.
+    
+    start <- these[max(start.ok),]
+    end <- these[min(end.ok),]
+    
+    intron[i]<-"INTRONIC"
+    if(end$rank %in% c(1,2) & start$rank %in% c(1,2)){
+     intron[i] <- 'FIRST INTRON'
+   }
+    
+  }#else
+    
+  }#for
+
+  #fix the utr list for non-exonic ones
+  utr[which(utr=='')] <- NA
+  
+  return(data.frame(nearest, exon=exon, intron=intron, utr=utr))
+}
