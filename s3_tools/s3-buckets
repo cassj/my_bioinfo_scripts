@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Net::Amazon::S3;
+use Getopt::Lucid qw ( :all );
+use Exception::Class;
+
+my  @specs = (
+	      Param("access_key|a")->default($ENV{AWS_ACCESS_KEY}),
+	      Param("secret_key|s")->default($ENV{AWS_SECRET_KEY}),
+	     );
+
+my $USAGE = "Usage: s3-buckets --access_key <aws access key> --secret_key <aws secret key>";
+
+#try
+my $opt;
+eval { $opt = Getopt::Lucid->getopt( \@specs ) };
+
+#catch
+my $e;
+if ( $e = Exception::Class->caught('Getopt::Lucid::Exception::ARGV') ){
+  print "$@\n$USAGE\n";
+  exit;
+} 
+else {
+  $e = Exception::Class->caught();
+  ref $e ? $e->rethrow : die $e if $e;
+}
+
+my $access_key = $opt->get_access_key or die "No access key specified and none in \$AWS_ACCESS_KEY\n$USAGE\n";
+my $secret_key = $opt->get_secret_key or die "No secret key specified and none in \$AWS_SECRET_KEY\n$USAGE\n";
+
+my $s3 = Net::Amazon::S3->new({
+			       'aws_access_key_id'     => $access_key,
+			       'aws_secret_access_key' => $secret_key,
+			       'retry'                 => 1,
+			       'secure'                => 1,
+			      });
+
+my $response = $s3->buckets or die "Failed to retrieve buckets $!";
+
+print "Your Buckets...\n";
+foreach ( @{ $response->{buckets} } ) {
+  print  "\t".$_->bucket."\n";
+  print "\t\tLocation Constraint: ".$_->get_location_constraint."\n" if $_->get_location_constraint;
+  print "\n";
+}

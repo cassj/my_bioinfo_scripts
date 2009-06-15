@@ -1,0 +1,51 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Net::Amazon::S3;
+use Getopt::Lucid qw ( :all );
+use Exception::Class;
+
+my  @specs = (
+	      Param("name|n")->required,    
+	      Param("access_key|a")->default($ENV{AWS_ACCESS_KEY}),
+	      Param("secret_key|s")->default($ENV{AWS_SECRET_KEY}),
+	     );
+
+my $USAGE = "Usage: s3-delete-bucket --name <bucket_name>";
+
+#try
+my $opt;
+eval { $opt = Getopt::Lucid->getopt( \@specs ) };
+
+#catch
+my $e;
+if ( $e = Exception::Class->caught('Getopt::Lucid::Exception::ARGV') ){
+  print "$@\n$USAGE\n";
+  exit;
+} 
+else {
+  $e = Exception::Class->caught();
+  ref $e ? $e->rethrow : die $e if $e;
+}
+
+my $name = lc($opt->get_name);
+my $access_key = $opt->get_access_key or die "No access key specified and none in \$AWS_ACCESS_KEY\n$USAGE\n";
+my $secret_key = $opt->get_secret_key or die "No secret key specified and none in \$AWS_SECRET_KEY\n$USAGE\n";
+
+print "Deleting bucket $name\n";
+
+my $s3 = Net::Amazon::S3->new(
+			      {   aws_access_key_id     => $access_key,
+				  aws_secret_access_key => $secret_key,
+				  retry                 => 1,
+				  secure                => 1,
+			      }
+			     );
+
+#retrieve bucket
+my $bucket = $s3->bucket($name) or die $s3->err . ": " . $s3->errstr;
+$bucket->delete_bucket or die $s3->err.": ".$s3->errstr;
+
+print "Deleted\n";

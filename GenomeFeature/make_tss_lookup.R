@@ -189,7 +189,7 @@ make.ensembl.gene.db <- function(ensmart=NULL, filename='genes.db'){
     dbGetQuery(con,paste("CREATE INDEX 'feature_start_index_",chr,"' ON chr",chr,"('FeatureStart')", sep=""));
     dbGetQuery(con,paste("CREATE INDEX 'feature_end_index_",chr,"' ON chr",chr,"('FeatureEnd')", sep=""));
     
-    #and unique key on transcript ID
+    #and unique key on gene ID
     dbGetQuery(con,paste("CREATE UNIQUE INDEX 'id_index_",chr,"' ON chr",chr,"('EnsemblGeneID')", sep=""))
 
   }

@@ -6,7 +6,8 @@
   Design primers to a specific region of the genome, checking the 
   appropriate strand.
 
-  Takes an input file which contains a list of chr and pos
+  Takes an input file which contains a list of:
+  $identifier, $chr, $genome_start, $genome_end, $strand, $pval, $probe_start, $probe_end, $genome_mid, $feature_start, $feature_end
 
 =cut
 
@@ -150,7 +151,7 @@ my $start_time = DateTime->now;
 
 
 #skip the header
-<$input_fh>;
+#<$input_fh>;
 while(my $this_row = <$input_fh>){
 
   #ditch any quotes.

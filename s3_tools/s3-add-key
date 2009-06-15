@@ -1,0 +1,72 @@
+#!/usr/bin/perl
+
+# this will create a private key, use s3-set-key-acl if you want
+# to change this (actually, *write* s3-set-key-acl if you want to 
+# change this...)
+
+use strict;
+use warnings;
+
+use Net::Amazon::S3;
+use Getopt::Lucid qw ( :all );
+use Exception::Class;
+
+my  @specs = (
+	      Param("access_key|a")->default($ENV{AWS_ACCESS_KEY}),
+	      Param("secret_key|s")->default($ENV{AWS_SECRET_KEY}),
+	      Param("bucket|b")->required,  
+	      Param("key|k")->required,
+	      Param("data|d")->required,
+	      Param("content_type|c"),
+	     );
+
+my $USAGE = "Usage: s3-add-key --access_key <AWS ACCESS KEY> --secret_key <AWS SECRET KEY> --bucket <BUCKET NAME> --key <new key> --data <data as string or filename> --content_type <CONTENT TYPE>";
+
+#try
+my $opt;
+eval { $opt = Getopt::Lucid->getopt( \@specs ) };
+
+#catch
+my $e;
+if ( $e = Exception::Class->caught('Getopt::Lucid::Exception::ARGV') ){
+  print "$@\n$USAGE\n";
+  exit;
+} 
+else {
+  $e = Exception::Class->caught();
+  ref $e ? $e->rethrow : die $e if $e;
+}
+
+my $access_key = $opt->get_access_key or die "No access key specified and none in \$AWS_ACCESS_KEY\n$USAGE\n";
+my $secret_key = $opt->get_secret_key or die "No secret key specified and none in \$AWS_SECRET_KEY\n$USAGE\n";
+
+my $s3 = Net::Amazon::S3->new({
+			       'aws_access_key_id'     => $access_key,
+			       'aws_secret_access_key' => $secret_key,
+			       'retry'                 => 1,
+			       'secure'                => 1,
+			      });
+
+my $bucket = $s3->bucket($opt->get_bucket) or die $s3->err . ": " . $s3->errstr;
+
+
+my $data = $opt->get_data;
+
+#if the contents of data is an existing filename, use it.
+#else send the string.
+if (-e $data){
+  $bucket->add_key_filename($opt->get_key, 
+			    $data,
+			    {content_type=>$opt->get_content_type}) or  die $s3->err . ": " . $s3->errstr;
+}
+else{
+
+  $bucket->add_key($opt->get_key, 
+		   $data,
+		   {content_type=>$opt->get_content_type}) or  die $s3->err . ": " . $s3->errstr;
+  
+}
+
+print "Added ".$opt->get_key." to bucket ".$opt->get_bucket."\n";
+
+
