@@ -42,7 +42,7 @@ for my $worksheet ( $workbook->worksheets() ) {
       my $cell = $worksheet->get_cell( $row, $col );
       #next unless $cell;
       my $value = $cell ? $cell->unformatted(): undef;
-      $value = '"'.$value.'"' if ($cell && $cell->{Type} eq 'Text');
+      $value = '"'.$value.'"' if ($cell && ($cell->{Type} eq 'Text'));
       push @row, $value;
     }
     print $fh join ",", @row;
