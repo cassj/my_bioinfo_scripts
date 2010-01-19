@@ -34,14 +34,16 @@ for my $worksheet ( $workbook->worksheets() ) {
 
   my ( $row_min, $row_max ) = $worksheet->row_range();
   my ( $col_min, $col_max ) = $worksheet->col_range();
+
+  next unless ($row_max>0 && $col_max>0);
   
   for my $row ( $row_min .. $row_max ) {
     my @row;
     for my $col ( $col_min .. $col_max ) {
       my $cell = $worksheet->get_cell( $row, $col );
-      next unless $cell;
-      my $value = $cell->unformatted();
-      $value = '"'.$value.'"' if $cell->{Type} eq 'Text';
+      #next unless $cell;
+      my $value = $cell ? $cell->unformatted(): '';
+      $value = '"'.$value.'"' if ($cell && $cell->{Type} eq 'Text');
       push @row, $value;
     }
     print $fh join ",", @row;
@@ -50,3 +52,6 @@ for my $worksheet ( $workbook->worksheets() ) {
 
   $fh->close;
 }
+
+
+
