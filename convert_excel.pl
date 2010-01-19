@@ -28,15 +28,14 @@ for my $worksheet ( $workbook->worksheets() ) {
   $name =~s/ /_/g;
   my $outfile = "$dir/$name.csv";
   
-
-  my $fh = new IO::File;
-  $fh->open("> $outfile") or die "Can't open $outfile for writing: $!";
-
   my ( $row_min, $row_max ) = $worksheet->row_range();
   my ( $col_min, $col_max ) = $worksheet->col_range();
 
   next unless ($row_max>0 && $col_max>0);
   
+  my $fh = new IO::File;
+  $fh->open("> $outfile") or die "Can't open $outfile for writing: $!";
+
   for my $row ( $row_min .. $row_max ) {
     my @row;
     for my $col ( $col_min .. $col_max ) {
