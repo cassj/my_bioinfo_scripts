@@ -41,7 +41,7 @@ for my $worksheet ( $workbook->worksheets() ) {
     for my $col ( $col_min .. $col_max ) {
       my $cell = $worksheet->get_cell( $row, $col );
       #next unless $cell;
-      my $value = $cell ? $cell->unformatted(): '';
+      my $value = $cell ? $cell->unformatted(): undef;
       $value = '"'.$value.'"' if ($cell && $cell->{Type} eq 'Text');
       push @row, $value;
     }
