@@ -4,10 +4,10 @@ require 'rake/clean'
 
 
 ###
-# fetch the data from Noel's web dir
+# fetch the data 
 desc "Fetch collaboration data"
 file 'collaborations.xls' do
-  sh "wget -O collaborations.xls 'http://mng.iop.kcl.ac.uk/~spnenjb/collaborations.xls'"
+  sh "wget -O collaborations.xls 'http://github.com/cassj/my_bioinfo_scripts/raw/master/collaborations.xls'"
 end
 
 CLOBBER.include('collaborations.xls')
