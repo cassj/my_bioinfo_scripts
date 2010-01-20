@@ -1,0 +1,67 @@
+require 'rubygems'
+require 'fileutils'
+require 'rake/clean'
+
+
+###
+# fetch the data from Noel's web dir
+desc "Fetch collaboration data"
+file 'collaborations.xls' do
+  sh "wget -O collaborations.xls 'http://mng.iop.kcl.ac.uk/~spnenjb/collaborations.xls'"
+end
+
+CLOBBER.include('collaborations.xls')
+
+
+
+###
+# fetch the required scripts
+###
+desc "Fetch convert_excel.pl"
+file 'convert_excel.pl' do
+  sh "wget -O convert_excel.pl  'http://github.com/cassj/my_bioinfo_scripts/raw/master/convert_excel.pl'"
+end
+
+desc "draw_iop_collaborations.R"
+file 'draw_iop_collaborations.R' do
+  sh "wget -O draw_iop_collaborations.R  'http://github.com/cassj/my_bioinfo_scripts/raw/master/draw_iop_collaborations.R'"
+end
+
+desc "Fetch all required scripts"
+task :fetch_all_scripts => ['convert_excel.pl','draw_iop_collaborations.R'] do
+end
+
+CLEAN.include('convert_excel.pl')
+CLEAN.include('draw_iop_collaborations.R')
+
+CLOBBER.include('convert_excel.pl')
+CLOBBER.include('draw_iop_collaborations.R')
+
+
+
+###
+# Convert excel file to csv
+###
+desc "Convert excel to csv"
+task :excel2csv => ['collaborations.xls', 'convert_excel.pl'] do
+  sh "perl convert_excel.pl collaborations.xls"
+end
+
+CLOBBER.include("*.csv")
+
+
+###
+#  Generate pdf graphic
+###
+desc "Make PDF Plot"
+file "collaboration.pdf" => ['excel2csv','draw_iop_collaborations.R' ] do
+   sh "R --vanilla --slave< draw_iop_collaborations.R"
+end
+
+CLOBBER.include("collaboration.pdf")
+
+
+###
+# Do everything by default.
+###
+task :default => ['collaboration.pdf']

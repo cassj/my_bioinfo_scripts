@@ -67,10 +67,10 @@ iop.graph <- set.graph.attribute(iop.graph, "layout", layout.circle(iop.graph))
 
 
 library(Cairo)
-Cairo(file="collaboration.pdf", type="pdf", width=11.7, height=8.3, title="Collaboration in the IoP", units="in", dpi=300)
+Cairo(file="collaboration.pdf", type="pdf", width=11.7, height=8.3, title="Collaboration Within the IoP", units="in", dpi=300)
 plot(iop.graph)
 
-title(main="Collaboration within the IoP", cex.main=2)
+title(main="Collaboration Within the IoP", cex.main=2)
 
 savefont <- par(font=3) 
 legend("bottomleft", legend=names(cols), fill=cols, bty="n", cex=0.7)
