@@ -11,7 +11,7 @@ file 'collaborations.xls' do
 end
 
 CLOBBER.include('collaborations.xls')
-
+CLEAN.include('collaborations.xls')
 
 
 ###
@@ -47,6 +47,7 @@ task :excel2csv => ['collaborations.xls', 'convert_excel.pl'] do
   sh "perl convert_excel.pl collaborations.xls"
 end
 
+CLEAN.include("*.csv")
 CLOBBER.include("*.csv")
 
 
