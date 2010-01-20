@@ -21,6 +21,8 @@ for (i in 1:nrow(data)){
   data[i, inds]<-0
 }
 
+# load the metadata about people 
+metadata <- read.csv("Sheet2.csv", header=T, stringsAsFactors=F, row.names=1)
 
 #sort the metadata into affiliations
 metadata <- metadata[order(metadata[,"Affiliation"]),]
@@ -30,12 +32,14 @@ inds <- rownames(metadata)
 data<-data[inds,]
 data<-data[,inds]
 
-# load the metadata about people 
-metadata <- read.csv("Sheet2.csv", header=T, stringsAsFactors=F, row.names=1)
+
 people <- rownames(data)
 affiliations <- unique(metadata[,"Affiliation"])
 cols <- rainbow(length(affiliations))
 names(cols) <- affiliations
+
+
+
 
 #create an empty graph
 iop.graph <- graph.formula()
