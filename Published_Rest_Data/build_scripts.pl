@@ -12,15 +12,10 @@ my $xpn_cols = {
 		Astro => [qw(dn dn dn dn ev ev ev ev)]
 	       };
 
-my @files = @_;
-chomp @_;
-
-#opendir(DIR, 'scripts/templates') || die "can't opendir scripts/templates: $!";
-#my @files = grep { !/^\.+$/ && !/~$/ && !/^\#.+\#$/ && -f "scripts/templates/$_" } readdir(DIR);
-#closedir DIR;
+my @files = @ARGV;
+chomp @files;
 
 my $tt = Template->new({
-    INCLUDE_PATH => 'scripts/templates',
     INTERPOLATE  => 1,
 }) || die "$Template::ERROR\n";
 
@@ -34,3 +29,5 @@ foreach my $file (@files){
       || die $tt->error(), "\n";
   }
 }
+
+
