@@ -26,7 +26,7 @@ my $tt = Template->new({
 
 foreach my $file (@files){
   foreach my $cell_line (@cell_lines){
-   my ($filename) = $file =~ /(.+)\.tt2/;
+   my ($filename) = $file =~ /.*\/(.+)\.tt2/;
     $tt->process($file, 
 		 {cell_line => $cell_line,
 		  xpn_cols => $xpn_cols,
