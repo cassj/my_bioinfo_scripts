@@ -1,15 +1,14 @@
-source("lib/featureComp_classes.R")
-source("lib/genomeFeature_classes.R")
-source("lib/qw.R")
+source("scripts/qw.R")
+source("scripts/liftOver.R")
 
 #read all of the csv files in
-as<-read.csv("[%cell_line%]/PET_data/Altered_Spacer.csv")
-cd<-read.csv("[%cell_line%]/PET_data/Convergent&Divergent.csv")
-lhs<-read.csv("[%cell_line%]/PET_data/Left_Half-Site.csv")
-rhs<-read.csv("[%cell_line%]/PET_data/Right_Half-Site.csv")
-canon<-read.csv("[%cell_line%]/PET_data/Canonical_RE1.csv")
-flipped<-read.csv("[%cell_line%]/PET_data/Flipped_Orientation.csv")
-nore1<-read.csv("[%cell_line%]/PET_data/No_RE1_Motif.csv")
+as<-read.csv("[% cell_line %]/PET_data/Altered_Spacer.csv")
+cd<-read.csv("[% cell_line %]/PET_data/Convergent&Divergent.csv")
+lhs<-read.csv("[% cell_line %]/PET_data/Left_Half-Site.csv")
+rhs<-read.csv("[% cell_line %]/PET_data/Right_Half-Site.csv")
+canon<-read.csv("[% cell_line %]/PET_data/Canonical_RE1.csv")
+flipped<-read.csv("[% cell_line %]/PET_data/Flipped_Orientation.csv")
+nore1<-read.csv("[% cell_line %]/PET_data/No_RE1_Motif.csv")
 
 cols<-qw(PET.ID, RE1.Type, Chromosome, 
          Left.Motif.Start, Left.Motif.End, Left.Sequence, Left.Direction, 
@@ -93,161 +92,47 @@ nore1<-cbind(nore1, RE1.Type="No_RE1", Left.Motif.Start=NA, Left.Motif.End=NA, L
 nore1<-nore1[,cols]
 data<-rbind(data, nore1)
 
+to.map<-data[,qw(Chromosome, Region.Start, Region.End)]
+colnames(to.map) <- c("chr","start","end")
+mapped <- liftOver(to.map , chain.file="lib/mm8ToMm9.over.chain")
+data[,qw(Region.Start,Region.End)] <- mapped[,qw(start,end)] 
+
+to.map<-data[,qw(Chromosome, Left.Motif.Start, Left.Motif.End)]
+colnames(to.map) <- c("chr","start","end")
+mapped <- liftOver(to.map , chain.file="lib/mm8ToMm9.over.chain")
+data[,qw(Left.Motif.Start, Left.Motif.End)] <- mapped[,qw(start,end)] 
+
+to.map<-data[,qw(Chromosome, Right.Motif.Start, Right.Motif.End)]
+colnames(to.map) <- c("chr","start","end")
+mapped <- liftOver(to.map , chain.file="lib/mm8ToMm9.over.chain")
+data[,qw(Right.Motif.Start,Right.Motif.End)] <- mapped[,qw(start,end)] 
 
 
-#convert positions to mm9
 
-liftOver<-function(chr,start,end){
-  this<-data.frame(chr,start,end)
-  write.table(this, file="/tmp/in.bed", sep="\t", row.names=F, col.names=F, quote=F)
-  system('liftOver /tmp/in.bed /usr/local/share/liftoverfiles/mm8ToMm9.over.chain /tmp/out.bed /tmp/UM.bed')
-
-  #how to test for lines in file?
-  this.new<-c(as.character(chr),NA,NA)
-  try(
-    this.new<-read.table('/tmp/out.bed', sep="\t") 
-      ,silent=T)
-  return(as.character(this.new))
+#There's no point in keeping anything that doesn't have a region - we don't know where it maps to:
+inds <- union(which(is.na(data$Region.Start)), which(is.na(data$Region.End)))
+if(length(inds)>0){
+  data <- data[-1*inds,]
 }
 
-mm9ify<-function(this.row){
-  
-  chr<-this.row[3]
-  start<-this.row[4]
-  end<-this.row[5]
-  if(!is.na(start)){
-     res<-liftOver(chr,start,end)
-     this.row[4]<-res[2]
-     this.row[5]<-res[3]
-  }
-  start<-this.row[8]
-  end<-this.row[9]
-  if(!is.na(start)){
-     res<-liftOver(chr,start,end)
-     this.row[8]<-res[2]
-     this.row[9]<-res[3]
-  }
-  start<-this.row[13]
-  end<-this.row[14]
-  if(!is.na(start)){
-     res<-liftOver(chr,start,end)
-     this.row[13]<-res[2]
-     this.row[14]<-res[3]
-  }
-  return(this.row)
-}
 
-mm9.data<-t(apply(data, 1, mm9ify))
+#create a RangedData object for the region start and end:
+library(IRanges)
 
-mm9.data<-data.frame(mm9.data, stringsAsFactors=F)
+#we have to give them names to avoid a bug in ChIPpeakAnnot if we want to use it later
+rd <- RangedData(ranges = IRanges(
+                   start= data$Region.Start,
+                   end = data$Region.End,
+                   ),
+                 names = as.character(data$PET.ID),
+                 space = as.character(data$Chromsome),
+                 values = data[,
+                   qw(RE1.Type,
+                      Left.Motif.Start, Left.Motif.End, Left.Sequence, Left.Direction,
+                      Right.Motif.Start, Right.Motif.End, Right.Sequence, Right.Direction,
+                      Spacer)]
 
-mm9.data[,"Left.Motif.Start"]<-as.numeric(mm9.data[,"Left.Motif.Start"])
-mm9.data[,"Left.Motif.End"]<-as.numeric(mm9.data[,"Left.Motif.End"])
+                 )
+#And save the result
+save(rd, file="[% cell_line %]/PET_data/RangedData.R")
 
-mm9.data[,"Right.Motif.Start"]<-as.numeric(mm9.data[,"Right.Motif.Start"])
-mm9.data[,"Right.Motif.End"]<-as.numeric(mm9.data[,"Right.Motif.End"])
-
-mm9.data[,"Region.Start"]<-as.numeric(mm9.data[,"Region.Start"])
-mm9.data[,"Region.End"]<-as.numeric(mm9.data[,"Region.End"])
-
-
-Region.Length<-(data[,"Region.End"] - data[,"Region.Start"])+1
-data<-cbind(data,Region.Length)
-
-Region.Length<-(mm9.data[,"Region.End"] - mm9.data[,"Region.Start"])+1
-mm9.data<-cbind(mm9.data,Region.Length)
-
-#we don't (apparently) have strand info
-data<-cbind(data,Strand=0)
-mm9.data<-cbind(mm9.data,Strand=0)
-
-#some of the mm8 data won't map to mm9. Throw it away
-um<-which(is.na(mm9.data[,"Region.Start"]))
-mm9.data<-mm9.data[-um,]
-
-#save the full dataset in files
-save(data, file="[%cell_line%]/PET_data/data.RData")
-write.csv(data, file="[%cell_line%]/PET_data/data.csv")
-
-save(mm9.data, file="[%cell_line%]/PET_data/mm9_data.RData")
-write.csv(data, file="[%cell_line%]/PET_data/mm9_data.csv")
-
-#and as a genomeFeature database
-
-
-#note that names in sqlite can't have . in them, RSQLite 
-#replaces them with _
-features<-data
-colnames(features)<-qw(PET_ID, 
-		       RE1_Type, 
-		       Chr, 
-		       Left_Motif_Start,
-		       Left_Motif_End,
-		       Left_Sequence,
-		       Left_Direction,
-		       Right_Motif_Start,
-		       Right_Motif_End,
-		       Right_Sequence,
-		       Right_Direction,
-		       Spacer,	
-		       GenomeStart,
-		       GenomeEnd,
-		       Region_Length,
-		       Strand
-		       )
-
-
-gf <- gF(features=features,
-	      data.source="Johnson et al, REST Regulates Distinct Transcriptional Networks in Embryonic and Neural Stem Cells, PLOS Biology 6(10) e256.",
-                        species= "mmusculus",
-                        genomeBuild="NCBI 36 / mm8",
-                        creation.date=date(),
-                        notes="",
-                        feature.id.field="PET_ID",
-                        name="ChIPPET derived RE1 sites from Rory Johnson",
-                        description="See paper")
-
-
-
-
-save(gf, file="[%cell_line%]/PET_data/gf.RData")
-make.bed(gf, filename="[%cell_line%]/PET_data/PETsites_mm8.bed", header=T, track.name="RE1 ChIPPET Sites Mouse [%cell_line%]")
-make.feature.db(gf, "[%cell_line%]/PET_data/gf.db")
-
-
-features<-mm9.data
-colnames(features)<-qw(PET_ID, 
-		       RE1_Type, 
-		       Chr, 
-		       Left_Motif_Start,
-		       Left_Motif_End,
-		       Left_Sequence,
-		       Left_Direction,
-		       Right_Motif_Start,
-		       Right_Motif_End,
-		       Right_Sequence,
-		       Right_Direction,
-		       Spacer,	
-		       GenomeStart,
-		       GenomeEnd,
-		       Region_Length,
-		       Strand
-		       )
-
-
-mm9.gf <- gF(features=features,
-	      data.source="Johnson et al, REST Regulates Distinct Transcriptional Networks in Embryonic and Neural Stem Cells, PLOS Biology 6(10) e256.",
-                        species= "mmusculus",
-                        genomeBuild="NCBI 37 / mm9",
-                        creation.date=date(),
-                        notes="mapped by UCSC liftOver from original mm8 positions",
-                        feature.id.field="PET_ID",
-                        name="ChIPPET derived RE1 sites from Rory Johnson",
-                        description="See paper")
-
-
-
-
-save(mm9.gf, file="[%cell_line%]/PET_data/mm9_gf.RData")
-make.bed(mm9.gf, filename="[%cell_line%]/PET_data/PETsites_mm9.bed", header=T, track.name="RE1 ChIPPET Sites Mouse [%cell_line%]")
-make.feature.db(mm9.gf, "[%cell_line%]/PET_data/mm9_gf.db")
