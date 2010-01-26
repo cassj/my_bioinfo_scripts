@@ -125,7 +125,7 @@ rd <- RangedData(ranges = IRanges(
                    end = data\$Region.End,
                    ),
                  names = as.character(data\$PET.ID),
-                 space = as.character(data\$Chromsome),
+                 space = as.character(data\$Chromosome),
                  values = data[,
                    qw(RE1.Type,
                       Left.Motif.Start, Left.Motif.End, Left.Sequence, Left.Direction,
