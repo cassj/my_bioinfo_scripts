@@ -1,0 +1,315 @@
+###
+# Analysis of Rory / Megan / Manu Dominant-Negative REST
+# expression data and REST ChIPPET data
+# 
+###
+
+###
+# rake -T 
+# will summarise the analysis performed in this directory
+# rake 
+# wil rerun the analysis 
+###
+
+require 'rubygems'
+require 'fileutils'
+require 'rake/clean'
+
+
+CLOBBER.include('publication')
+
+CLOBBER.include('scripts')
+CLEAN.include('scripts')
+
+CLOBBER.include('lib')
+CLEAN.include('lib')
+
+CLOBBER.include('NS5')
+CLOBBER.include('ESC')
+
+
+### Fetch Publication and Supplemental Data
+
+
+## Note: the paper doesn't say otherwise, so I'm assuming all genome ranges are standard base-1, fully closed. 
+## as opposed to UCSC 0-based half-open.
+
+directory "publication"
+file "publication/Johnson.pdf" => ["publication"]
+
+
+desc "Fetch Johnson et al"
+task :fetch_publication => ["publication/Johnson.pdf"] do
+  
+  unless File.exist?("publication/Johnson.pdf") 
+    sh "wget -O publication/Johnson.pdf 'http://www.plosbiology.org/article/fetchObjectAttachment.action?uri=info%3Adoi%2F10.1371%2Fjournal.pbio.0060256&representation=PDF'"
+  end
+  
+  unless File.exist?('publication/SupplementalMethods.txt') 
+    sh "wget -O publication/SupplementalMethods.txt 'http://www.plosbiology.org/article/fetchSingleRepresentation.action?uri=info:doi/10.1371/journal.pbio.0060256.sd007'"
+  end
+  
+  for i in 1..9
+    unless File.exist?("publication/FigS#{i}")
+      sh "wget -O publication/FigS#{i} 'http://www.plosbiology.org/article/fetchSingleRepresentation.action?uri=info:doi/10.1371/journal.pbio.0060256.sg00#{i}'"
+    end 
+  end
+  for i in 10..13
+    unless File.exist?("publication/FigS#{i}")
+      sh "wget -O publication/FigS#{i} 'http://www.plosbiology.org/article/fetchSingleRepresentation.action?uri=info:doi/10.1371/journal.pbio.0060256.sg0#{i}'"
+    end
+  end
+  for i in 1..6
+    unless File.exist?("publication/DatasetS#{i}")
+      sh "wget -O publication/DatasetS#{i} 'http://www.plosbiology.org/article/fetchSingleRepresentation.action?uri=info:doi/10.1371/journal.pbio.0060256.sd00#{i}'"
+    end
+  end  
+  unless File.exists?('publication/README')
+     file = File.new("publication/README", "w")
+    file.puts("Figure S1. Validation of ESC Pluripotency by Cell Sorting\nFigure S2. Expression of Neural Stem Cell Markers by NS5 Cells\nFigure S3. PCR Validation of ChIP-chip in ESC\nFigure S4. qPCR Validation of ChIP-chip Data: Shared ESC/NSC RE1s\nFigure S5. qPCR Validation of ChIP-chip Data: ESC-Specific Binding Sites\nFigure S6. qPCR Validation of ChIP-chip Data: NSC-Specific RE1s\nFigure S7. qPCR Validation of ChIP-chip Data: 3T3-Specific RE1s\nFigure S8. qPCR Validation of ChIP-PET to Identify PET Cluster Size Cutoff (REST ChIP in ESC)\nFigure S9. Comparison of ChIP-PET and ChIP-chip REST Binding Predictions\nFigure S10. qPCR Validation of ChIP-chip Data: 'No Motif' Binding Sites in ESC\nFigure S11. qPCR Validation of ChIP-PET Data: Shared ESC/NSC RE1s\nFigure S12. qPCR Validation of ChIP-PET Data: ESC-Specific Binding Sites\nFigure S13. REST Represses Most Effectively from Promoter-Proximal Binding Sites\nFigure S14. Regulation of Pluripotency Genes by REST\nFigure S15. No Evidence for REST Recruitment to the Mouse mir-21 Locus\n\nDataset S1. ChIP-chip Data\nDataset S2. ESC ChIP-PET Motifs\nDataset S3. NSC ChIP-PET Motifs\nDataset S4. ChIP-PET Target Genes\nDataset S5. DN:REST Gene Expression Data\nDataset S6. ESC-Specific Target Genes")
+    file.close
+  end
+end
+
+
+
+###
+# fetch the required scripts
+###
+directory 'scripts'
+
+file 'scripts/convert_excel.pl' => ["scripts"] do
+  sh "wget -O scripts/convert_excel.pl  'http://github.com/cassj/my_bioinfo_scripts/raw/master/convert_excel.pl'"
+end
+
+file 'scripts/qw.R' do
+  sh "wget -O scripts/qw.R  'http://github.com/cassj/my_bioinfo_scripts/raw/master/qw.R'"
+end
+
+directory 'scripts/templates'
+file 'scripts/templates/keeyew_xpn.R.tt2' => ['scripts/templates'] do
+  sh "wget -O scripts/templates/keeyew_xpn.R.tt2  'http://github.com/cassj/my_bioinfo_scripts/raw/master/Published_Rest_Data/keeyew_xpn.R.tt2'"
+end
+
+file 'scripts/templates/limma_xpn.R.tt2' => ['scripts/templates'] do
+  sh "wget -O scripts/templates/limma_xpn.R.tt2  'http://github.com/cassj/my_bioinfo_scripts/raw/master/Published_Rest_Data/limma_xpn.R.tt2'"
+end
+
+file 'scripts/templates/csv_to_iranges.R.tt2' => ['scripts/templates'] do
+  sh "wget -O scripts/templates/csv_to_iranges.R.tt2  'http://github.com/cassj/my_bioinfo_scripts/raw/master/Published_Rest_Data/csv_to_iranges.R.tt2'"
+end
+
+file 'scripts/templates/xpn_csv_to_iranges.R.tt2' => ['scripts/templates'] do
+  sh "wget -O scripts/templates/xpn_csv_to_iranges.R.tt2  'http://github.com/cassj/my_bioinfo_scripts/raw/master/Published_Rest_Data/xpn_csv_to_iranges.R.tt2'"
+end
+
+directory 'lib'
+file 'lib/mm8ToMm9.over.chain' => ["lib"] do
+  sh "wget -O lib/mm8ToMm9.over.chain.gz  'http://hgdownload.cse.ucsc.edu/goldenPath/mm8/liftOver/mm8ToMm9.over.chain.gz'"
+  sh "gunzip -c lib/mm8ToMm9.over.chain.gz > lib/mm8ToMm9.over.chain"
+end
+
+file 'scripts/liftOver.R' => ['scripts'] do
+    sh "wget -O scripts/liftOver.R  'http://github.com/cassj/my_bioinfo_scripts/raw/master/liftOver.R'"
+end
+
+file 'scripts/templates/csv_to_iranges.R.tt2' => ['scripts/templates', 'lib/mm8ToMm9.over.chain'] do
+  sh "wget -O scripts/templates/csv_to_iranges.R.tt2  'http://github.com/cassj/my_bioinfo_scripts/raw/master/Published_Rest_Data/csv_to_iranges.R.tt2'"
+end
+
+
+#Illumina Annotation
+file 'lib/MouseRef-8_V1_1_R4_11234312_A.txt' => ['lib'] do
+  sh "wget -O lib/MouseRef-8_V1_1_R4_11234312_A.zip  http://www.switchtoi.com/pdf/Annotation%20Files/Mouse/MouseRef-8_V1_1_R4_11234312_A.zip"
+  sh "unzip -c lib/MouseRef-8_V1_1_R4_11234312_A.zip >  lib/MouseRef-8_V1_1_R4_11234312_A.txt"
+end
+
+
+#old ReMOAT Annotation, to mm8 but we can liftover. Only dataset I can find that uses the old ilumina target IDs
+file 'lib/IlluminaMouseV1.txt' => ['lib'] do
+ sh "wget -O lib/IlluminaMouseV1.txt  http://www.compbio.group.cam.ac.uk/Resources/Annotation/IlluminaMouseV1.txt"
+end
+
+
+file 'scripts/build_scripts.pl' => ["scripts"] do 
+  sh "wget -O scripts/build_scripts.pl  'http://github.com/cassj/my_bioinfo_scripts/raw/master/Published_Rest_Data/build_scripts.pl'"
+end
+
+task :fetch_scripts => ['scripts/qw.R', "scripts/convert_excel.pl", "scripts/templates/keeyew_xpn.R.tt2", "scripts/templates/limma_xpn.R.tt2", 'scripts/templates/csv_to_iranges.R.tt2', 'scripts/build_scripts.pl', 'scripts/templates/csv_to_iranges.R.tt2', 'scripts/liftOver.R'] do
+end
+
+
+
+
+
+###
+# Build the script templates
+###
+
+task :build_limma_xpn_scripts => ['scripts/templates/limma_xpn.R.tt2', 'scripts/build_scripts.pl'] do
+  sh "perl scripts/build_scripts.pl scripts/templates/limma_xpn.R.tt2"
+end
+
+task :build_ky_xpn_scripts   => ['scripts/templates/keeyew_xpn.R.tt2','scripts/build_scripts.pl'] do
+  sh "perl scripts/build_scripts.pl scripts/templates/keeyew_xpn.R.tt2"
+end
+
+task :build_csv2iranges_scripts   => ['scripts/templates/csv_to_iranges.R.tt2','scripts/build_scripts.pl'] do
+  sh "perl scripts/build_scripts.pl scripts/templates/csv_to_iranges.R.tt2"
+end
+
+task :build_xpn2iranges_scripts   => ['scripts/templates/xpn_csv_to_iranges.R.tt2','scripts/build_scripts.pl'] do
+  sh "perl scripts/build_scripts.pl scripts/templates/xpn_csv_to_iranges.R.tt2"
+end
+
+
+task :build_scripts => [:build_limma_xpn_scripts, :build_ky_xpn_scripts, :build_csv2iranges_scripts, :build_xpn2iranges_scripts] do
+end
+
+
+
+
+
+
+
+###
+# Parse PET data to csv
+###
+
+namespace 'pet_to_csv' do
+
+  directory 'ESC/PET_data'
+  task :esc => [:fetch_publication, 'scripts/convert_excel.pl', 'ESC/PET_data'] do
+    sh 'perl  scripts/convert_excel.pl publication/DatasetS2 ESC/PET_data' 
+  end
+ 
+  directory 'NS5/PET_data'
+  task :ns5 => [:fetch_publication, 'scripts/convert_excel.pl', 'NS5/PET_data'] do
+    sh 'perl  scripts/convert_excel.pl publication/DatasetS3 NS5/PET_data' 
+  end
+
+  desc "Parse All PET data to csv"
+  task :all => [:ns5, :esc] do
+  end
+
+end
+
+
+###
+# Merge the PET csv files from different RE1 site types and convert to IRanges
+###
+
+namespace 'pet_csv2iranges' do
+
+  task :esc => ['fetch_publication', 'build_csv2iranges_scripts', 'pet_to_csv:esc'] do
+    sh 'R --slave --vanilla < scripts/ESC/csv_to_iranges.R' 
+  end
+
+  task :ns5 => ['fetch_publication', 'build_csv2iranges_scripts', 'pet_to_csv:ns5'] do
+    sh 'R --slave --vanilla < scripts/NS5/csv_to_iranges.R' 
+  end
+
+  desc "Parse PET csv files to R Iranges library RangedData objects"
+  task :all => [:ns5, :esc] do
+  end
+
+end
+
+
+
+
+####
+# Fetch the expression data
+# this isn't distributed with the paper, it's from Kee Yew in Singapore.
+# I've shoved it on the mng server
+###
+
+directory "NS5/expression_data"
+directory "ESC/expression_data" 
+
+file 'ESC/expression_data/ESC-REST-DN-raw.csv' => ['ESC/expression_data'] do
+  sh "wget -O 'ESC/expression_data/ESC-REST-DN-raw.csv' 'http://mng.iop.kcl.ac.uk/data_dump/E14-REST_DN_QC_List-w-Replicates.csv'"
+end 
+
+file 'NS5/expression_data/NS5-REST-DN-raw.csv' => ['NS5/expression_data'] do
+  sh "wget -O 'NS5/expression_data/NS5-REST-DN-raw.csv' 'http://mng.iop.kcl.ac.uk/data_dump/NS5-REST-DN-raw.csv'"
+end  
+
+desc "Fetch DN-REST expression data"
+task :fetch_xpn_data => ['ESC/expression_data/ESC-REST-DN-raw.csv', 'NS5/expression_data/NS5-REST-DN-raw.csv']do
+end
+
+
+
+###
+# Kee-Yew Analysis
+###
+namespace "keeyew_xpn" do
+
+  task :ns5 => [:build_ky_xpn_scripts, "NS5/expression_data"] do
+    system("R --vanilla --slave < scripts/NS5/keeyew_xpn.R > NS5/expression_data/keeyew_xpn.R.out")
+  end
+  
+  task :esc => [:build_ky_xpn_scripts, "ESC/expression_data"] do
+    system("R --vanilla --slave < scripts/ESC/keeyew_xpn.R > ESC/expression_data/keeyew_xpn.R.out")
+  end
+  
+  desc "Kee Yew's expression analysis"
+  task :all => ["keeyew_xpn:ns5", "keeyew_xpn:esc"] do
+  end
+
+end
+
+
+###
+# Limma
+###
+namespace "limma_xpn"  do
+  
+  desc "Limma analysis on NSC"
+  task :ns5 => [:build_limma_xpn_scripts, 'NS5/expression_data'] do
+    system("R --vanilla --slave < scripts/NS5/limma_xpn.R > NS5/expression_data/limma_xpn.R.out")
+  end
+  
+  desc "Limma analysis on ESC"	
+  task :esc => [:build_limma_xpn_scripts, 'ESC/expression_data' ]do
+    system("R --vanilla --slave < scripts/ESC/limma_xpn.R > ESC/expression_data/limma_xpn.R.out")
+  end
+  
+  desc "Limma expression analysis"
+  task :all => ["limma_xpn:ns5", "limma_xpn:esc"] do
+  end
+end
+
+
+
+
+###
+# make RangedData from the expression data too:
+# Note that the annotation from KY's expression data is old-style Illumina Target IDs and the only way 
+# I found to map them was to take the genome positions from the ReMOAT old annotation and liftOver them.
+# There are a few (10 or so) cases where a single target has multiple probes. Most are controls. I have removed
+# duplicates. See script for details
+###
+
+namespace 'xpn2iranges' do
+
+  task :esc => ['fetch_publication', 'build_xpn2iranges_scripts', 'limma_xpn:esc', 'keeyew_xpn:esc'] do
+    sh 'R --slave --vanilla < scripts/ESC/xpn_csv_to_iranges.R'
+  end
+
+  task :ns5 => ['fetch_publication', 'build_xpn2iranges_scripts', 'limma_xpn:ns5', 'keeyew_xpn:ns5'] do
+    sh 'R --slave --vanilla < scripts/NS5/xpn_csv_to_iranges.R'
+  end
+
+  desc "Parse PET csv files to R Iranges library RangedData objects"
+  task :all => [:ns5, :esc] do
+  end
+
+end
+
+
+###
+# Run everything as default
+##
+task :default => ['publication/Johnson.pdf', 'xpn2iranges:all', 'pet_csv2iranges:all'] 
