@@ -1,11 +1,13 @@
 #!/usr/bin/perl
 
+## For Rory's data
+
 use strict;
 use warnings;
 
 use Template;
 
-my @cell_lines = ('NS5', 'ESC', 'Astro');
+my @cell_lines = ('NS5', 'ESC');
 my $xpn_cols = {
 		ESC => [qw(ev ev ev dn dn dn)],
 		NS5 => [qw(ev ev ev dn dn dn)],
