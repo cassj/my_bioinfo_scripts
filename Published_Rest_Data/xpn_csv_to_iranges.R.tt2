@@ -27,11 +27,11 @@ old.annot<-read.csv("lib/IlluminaMouseV1.txt", sep="\t", header=T)
 #but very few, so let's just remove the dups and go with the probe locations:
 old.annot<-old.annot[!duplicated(old.annot[,2]),]
 rownames(old.annot)<-old.annot[,2]
-limma.annot<-cbind(limma, old.annot[as.character(limma$IlluminaID),])
-ky.annot<-cbind(ky, old.annot[as.character(ky$IlluminaID),])
+limma.annot<-cbind(limma, old.annot[as.character(limma\$IlluminaID),])
+ky.annot<-cbind(ky, old.annot[as.character(ky\$IlluminaID),])
 
 #ditch anything for which we have no annotation
-remove<-which(is.na(limma.annot$Chromosome))
+remove<-which(is.na(limma.annot\$Chromosome))
 limma.annot<-limma.annot[-remove,]
 
 remove<-which(is.na(ky.annot$Chromosome))
@@ -49,10 +49,10 @@ mapped <- liftOver(to.map , chain.file="lib/mm8ToMm9.over.chain")
 ky.annot[,qw(Chromosome, Start, End)] <- mapped[,qw(chr,start,end)]
 
 #ditch anything for which we have no region
-remove<-which(is.na(limma.annot$Chromosome))
+remove<-which(is.na(limma.annot\$Chromosome))
 limma.annot<-limma.annot[-remove,]
 
-remove<-which(is.na(ky.annot$Chromosome))
+remove<-which(is.na(ky.annot\$Chromosome))
 ky.annot<-ky.annot[-remove,]
 
 
@@ -67,11 +67,11 @@ colnames(ky.annot)[c(22,23)]<-qw(SpliceJunction, PerfectMatch)
 
 #we have to give them names to avoid a bug in ChIPpeakAnnot if we want to use it later
 rd.limma <- RangedData(ranges = IRanges(
-        	           start= limma.annot$Start,
-                	   end = limma.annot$End,
+        	           start= limma.annot\$Start,
+                	   end = limma.annot\$End,
                    ),
-                 names = as.character(limma.annot$IlluminaID),
-                 space = as.character(limma.annot$Chromosome),
+                 names = as.character(limma.annot\$IlluminaID),
+                 space = as.character(limma.annot\$Chromosome),
                  values = limma.annot[,
                    qw(logFC, AveExpr,t,P.Value, adj.P.Val, B, Search_key0, Target0, 
                       ProbeId0, Transcript0, Accession0, Symbol0, Definition0, Sequence,
@@ -83,11 +83,11 @@ rd.limma <- RangedData(ranges = IRanges(
 
 #we have to give them names to avoid a bug in ChIPpeakAnnot if we want to use it later
 rd.ky <- RangedData(ranges = IRanges(
-                           start= ky.annot$Start,
-                           end = ky.annot$End,
+                           start= ky.annot\$Start,
+                           end = ky.annot\$End,
                    ),
-                 names = as.character(ky.annot$IlluminaID),
-                 space = as.character(ky.annot$Chromosome),
+                 names = as.character(ky.annot\$IlluminaID),
+                 space = as.character(ky.annot\$Chromosome),
                  values = ky.annot[,
                    qw(LogFC, FC, rawp, BH, Search_key0, Target0,  
                       ProbeId0, Transcript0, Accession0, Symbol0, Definition0, Sequence,
