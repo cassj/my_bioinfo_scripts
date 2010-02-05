@@ -35,12 +35,14 @@ foreach my $bw (@bandwidth){
         foreach my $pvalue (@pvalue){
             print "Running for BW: $bw ; MFOLD: $mfold ;  PVAL: $pvalue\n";
 
-            print $readme "run$count\tmacs -t '../$treatment' -c '../$control' --gsize $genome_size --bw $bw --mfold $mfold --pvalue $pvalue --format BED --wig\n";
-
-           system("mkdir run$count");
+	    my $cmd = "tmacs -t '../$treatment'";
+	    $cmd .= " -c '../$control'" if $control;
+	    $cmd .= "--gsize $genome_size --bw $bw --mfold $mfold --pvalue $pvalue --format BED --wig";
+            print $readme "run$count\t$cmd\n";
+	    system("mkdir run$count");
             my $dir = getcwd;
             chdir("run$count");
-            my $out = `macs -t '../$treatment' -c '../$control' --gsize $genome_size --bw $bw --mfold $mfold --pvalue $pvalue --format BED --wig  2>&1`;
+            my $out = `$cmd  2>&1`;
             my $outfh = new IO::File;
             $outfh->open(">out.txt");
             print $outfh $out;
