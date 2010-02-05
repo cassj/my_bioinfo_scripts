@@ -37,7 +37,7 @@ foreach my $bw (@bandwidth){
 
 	    my $cmd = "macs -t '$treatment'";
 	    $cmd .= " -c '$control'" if $control;
-	    $cmd .= "--gsize $genome_size --bw $bw --mfold $mfold --pvalue $pvalue --format BED --wig";
+	    $cmd .= " --gsize $genome_size --bw $bw --mfold $mfold --pvalue $pvalue --format BED --wig";
             print $readme "run$count\t$cmd\n";
 	    system("mkdir run$count");
             my $dir = getcwd;
