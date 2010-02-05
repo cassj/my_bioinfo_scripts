@@ -87,7 +87,6 @@ rd.ky <- RangedData(ranges = IRanges(
                            start= ky.annot\$Start,
                            end = ky.annot\$End,
                    ),
-                 names = as.character(ky.annot\$IlluminaSentrixTargetID),
                  space = as.character(ky.annot\$Chromosome),
                  values = ky.annot[,
                    qw(log2FoldChange, FoldChange, pVal, FDR, Search_key0, Target0,  
