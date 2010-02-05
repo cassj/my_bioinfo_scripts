@@ -11,11 +11,8 @@ my $R = 'R';
 
 my $treatment = $ARGV[0];
 my $control = $ARGV[1];
-chomp $treatment;
-chomp $control;
-
-#my $treatment = '../Mash1IP.bed';
-#my $control = '../Mash1Input.bed';
+chomp $treatment if $treatment;
+chomp $control if $control;
 
 my $genome_size = 2394590051; #70% of mm9, just a guess.
 
@@ -35,14 +32,18 @@ foreach my $bw (@bandwidth){
         foreach my $pvalue (@pvalue){
             print "Running for BW: $bw ; MFOLD: $mfold ;  PVAL: $pvalue\n";
 
-	    my $cmd = "macs -t '$treatment'";
-	    $cmd .= " -c '$control'" if $control;
+	    my $cmd = "macs -t '../$treatment'";
+	    $cmd .= " -c '../$control'" if $control;
 	    $cmd .= " --gsize $genome_size --bw $bw --mfold $mfold --pvalue $pvalue --format BED --wig";
+
             print $readme "run$count\t$cmd\n";
+	    system("rm -Rf run$count");
 	    system("mkdir run$count");
             my $dir = getcwd;
             chdir("run$count");
+
             my $out = `$cmd  2>&1`;
+
             my $outfh = new IO::File;
             $outfh->open(">out.txt");
             print $outfh $out;
