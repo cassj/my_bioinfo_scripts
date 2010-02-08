@@ -34,6 +34,7 @@ more.annot <- more.annot[-1*(which(duplicated(more.annot[,c(1,3)]))),]
 
 rownames(more.annot) <- more.annot[,"ensembl_gene_id"]
 
+
 #and reset the values data.annot
 annot <- values(data.annot)
 new.annot <- list()
@@ -44,17 +45,11 @@ for(i in 1:length(annot)){
  new.annot[[i]] <- DataFrame(this.df)
 }
 
+
 new.annot <- SplitDataFrameList(new.annot, compress=T)
 names(new.annot) <- names(annot)
+
 values(data.annot) <- new.annot
-
-
-ids <- as.character(values(data.annot)[,"feature"])
-more.annot <- more.annot[ids,]
-
-more.annot <- cbind(as.data.frame(values(data.annot)),more.annot)
-values(data.annot) <- more.annot
-class(more.annot)
 
 
 newfile<-sub("RangedData", "AnnoRangedData", filename)
