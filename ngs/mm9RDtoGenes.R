@@ -15,6 +15,7 @@ names(rd)<-gsub("chr","",names(rd))
 
 data.annot <- annotatePeakInBatch(rd, AnnotationData=TSS.mouse.NCBIM37)
 
+
 #and that only gives you the ensembl gene ID, so get extra info:
 library(biomaRt)
 
@@ -34,14 +35,16 @@ more.annot <- more.annot[-1*(which(duplicated(more.annot[,c(1,3)]))),]
 
 rownames(more.annot) <- more.annot[,"ensembl_gene_id"]
 
-
-#and reset the values data.annot
+#and reset the values data.annot with the extra annotation
+#and the original scores.
 annot <- values(data.annot)
+rd <- values(rd)
 new.annot <- list()
 for(i in 1:length(annot)){
  this.df <- annot[[i]]
+ this.rd.df <- rd[[i]]
  these.ids <- this.df[,"feature"]
- this.df<-cbind(this.df,DataFrame( more.annot[these.ids,2:3]))
+ this.df<-cbind(this.df,this.rd.df,DataFrame( more.annot[these.ids,2:3]))
  new.annot[[i]] <- DataFrame(this.df)
 }
 
