@@ -64,7 +64,7 @@ my $min_amplicon = 100;
 my $max_amplicon = 150;
 my $upstream_of_tss= 0 ;
 my $downstream_of_tss = 0;
-my $tm_threshold =   65;
+my $tm_threshold =   70;
 
 
 #Diogo's strict parameters
@@ -87,7 +87,7 @@ my %primer3_params = (
                       PRIMER_SALT_CONC          => 50,
                       PRIMER_MAX_TM             => 60,
                       PRIMER_SELF_END           => 2,
-                      PRIMER_MAX_DIFF_TM        => 2,
+                      PRIMER_MAX_DIFF_TM        => 5,
                       PRIMER_MAX_SIZE           => 27,
                       PRIMER_NUM_RETURN         => 30
                      );

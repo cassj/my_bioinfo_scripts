@@ -65,13 +65,19 @@ extends qw( Bio::Root::Root
 	  );
 
 
-use vars qw/@cmd_args/;
+use vars qw/@cmd_args $convert_bin $draw_bin/;
 
 BEGIN{
   
   @cmd_args = qw/NA tmin tinc tmax sodium magnesium polymer suffix output prohibit force energyOnly noisolate mfold maxbp constraints basepairs circular allpairs maxloop nodangle simple prefilter/;
   
 }
+
+#really? surely these should be in the Vienna stuff?
+#$convert_bin =  "/usr/local/share/ViennaRNA/bin/ct2b.pl";
+#$draw_bin = "/usr/local/bin/RNAplot";  
+
+
 
 
 =head1 hybrid-ss-min Parameters
@@ -120,38 +126,38 @@ Usage in all cases is:
 
 subtype 'PosInt' => as 'Int' =>  where { $_ > 0};
 subtype 'PosOrZeroInt' => as 'Int' => where {$_ >= 0 };
-subtype 'PosOrZeroFloat'=> as 'Float' => where {$_ >= 0};
+subtype 'PosOrZeroFloat'=> as 'Num' => where {$_ >= 0};
 subtype 'ijk' => as 'Str' => where {/^\d+,\d+,\d+$/} => message {"Should be in the form: i,j,k"};
 subtype 'PWMax' => as 'Str' => where {/^\d+,\d*,?\d*$/ || /^[10]$/} => message {"Should be in the form P,W,Max"};
 #subtype 'ReadableFile'=> as 'Str'=> where {-r $_}=>message {"Should be a valid, readable filename"};
 subtype 'Prefilter' => as 'Str' =>where {/^\d+,\d+$/}=> message {"Should be in the form: val1,val2"};
 subtype 'Dir'=> as 'Str' =>where {-d $_}=>message {"Should be a valid directory"};
 subtype 'SeqObj' => as 'Object' => where {$_->isa('Bio::SeqI') && defined $_->seq && '' ne $_->seq }=> message {'Should be a Bio::SeqI implementation with a sequence defined'};
-subtype 'NucAc' => as 'String' => where {/^(D|R)NA$/i};
+subtype 'NucAc' => as 'Str' => where {/^(D|R)NA$/i};
 
-has 'NA' => (is => 'rw', isa => 'NucAc');
-has 'tmin' =>(is => 'rw', isa   => 'PosOrZeroInt');
-has 'tinc' =>(is => 'rw', isa => 'PosOrZeroInt');
-has 'tmax' =>(is    => 'rw',isa   => 'PosOrZeroInt');
-has 'sodium' => (is => 'rw', isa => 'PosOrZeroFloat');
-has 'magnesium' => ( is => 'rw', isa => 'PosOrZeroFloat');
-has 'polymer' => (is => 'rw', isa => 'Bool');
-has 'suffix' => (is => 'rw', isa => 'Str');
-has 'output' => (is => 'rw',isa => 'Str');
-has 'prohibit' => (is => 'rw', isa => 'ijk');
-has 'force' => (is => 'rw',isa => 'ijk');
-has 'energyOnly' => (is => 'rw',isa => 'Bool');
-has 'noisolate' => (is => 'rw', isa => 'Bool');
-has 'mfold' => (is => 'rw', isa => 'PWMax');
-has 'maxbp' => (is => 'rw',isa => 'PosInt');
-has 'constraints' => (is => 'rw',isa => 'ReadableFile');
-has 'basepairs' => (is => 'rw', isa=>'ReadableFile');
-has 'circular' => (is => 'rw',isa => 'Bool');
-has 'allpairs' => (is => 'rw', isa => 'Bool');
-has 'maxloop' => (is => 'rw',isa => 'PosInt');
-has 'nodangle' => (is => 'rw',  isa => 'Bool');
-has 'simple' => (is => 'rw',isa => 'Bool');
-has 'prefilter' => (is => 'rw',isa => 'Prefilter');
+has 'NA' => (is => 'rw', isa => 'NucAc|Undef');
+has 'tmin' =>(is => 'rw', isa   => 'PosOrZeroInt|Undef');
+has 'tinc' =>(is => 'rw', isa => 'PosOrZeroInt|Undef');
+has 'tmax' =>(is    => 'rw',isa   => 'PosOrZeroInt|Undef');
+has 'sodium' => (is => 'rw', isa => 'PosOrZeroFloat|Undef');
+has 'magnesium' => ( is => 'rw', isa => 'PosOrZeroFloat|Undef');
+has 'polymer' => (is => 'rw', isa => 'Bool|Undef');
+has 'suffix' => (is => 'rw', isa => 'Str|Undef');
+has 'output' => (is => 'rw',isa => 'Str|Undef');
+has 'prohibit' => (is => 'rw', isa => 'ijk|Undef');
+has 'force' => (is => 'rw',isa => 'ijk|Undef');
+has 'energyOnly' => (is => 'rw',isa => 'Bool|Undef');
+has 'noisolate' => (is => 'rw', isa => 'Bool|Undef');
+has 'mfold' => (is => 'rw', isa => 'PWMax|Undef');
+has 'maxbp' => (is => 'rw',isa => 'PosInt|Undef');
+has 'constraints' => (is => 'rw',isa => 'ReadableFile|Undef');
+has 'basepairs' => (is => 'rw', isa=>'ReadableFile|Undef');
+has 'circular' => (is => 'rw',isa => 'Bool|Undef');
+has 'allpairs' => (is => 'rw', isa => 'Bool|Undef');
+has 'maxloop' => (is => 'rw',isa => 'PosInt|Undef');
+has 'nodangle' => (is => 'rw',  isa => 'Bool|Undef');
+has 'simple' => (is => 'rw',isa => 'Bool|Undef');
+has 'prefilter' => (is => 'rw',isa => 'Prefilter|Undef');
 
 
 # other stuff
@@ -276,7 +282,7 @@ sub run{
     open(OLDOUT, ">&STDOUT"); #copy file descriptor
     open(STDOUT, ">> $tempfile.log") 
       or die "Can't redirect STDOUT to $tempfile.log";
-
+    
     #run the cmd.
     my $status = system("$cmd");
     $self->throw($self->program_name." crashed: $? $cmd\n")
@@ -323,9 +329,6 @@ sub _parse_results{
   #keep run parameters.
   #$res->{params}=$params;
  
-
-  
-  
   #grab the temps from the dG file.
   open FILE, "$prefix.dG" or die "Can't open $prefix.dG for reading";
   my @temps;
@@ -340,8 +343,6 @@ sub _parse_results{
   #store these in the results, 
   #$res->{temps} = \@temps;
 
-  my $convert_bin =  "/usr/local/share/ViennaRNA/bin/ct2b.pl";
-  my $draw_bin = "/usr/local/bin/RNAplot";  
 
   my (%dH,%dG, %dS, %Tm, $img);
   foreach my $temp (@temps){
@@ -384,25 +385,29 @@ sub _parse_results{
 		     
     close DH or die $!;
     close DG or die $!;
+
     
+    #this requires Vienna tools - which should be converted 
+    #into a perl wrapper and then tested for. Lets just leave
+    #for now.
     #don't bother plotting unless we've got somewhere to put them
-    if ($self->plot_dir){
-      
-      #draw structure
-      system ("$convert_bin $ctfile > $prefix.$temp.vienna");
-      system ("$draw_bin   < $prefix.$temp.vienna");
-
-      #RNAplot writes to rna.ps and can't be convinced to write to stdout.
-      #use tempfile to get a name again
-      #probly naview is the way forward. This'll do for now.
-      my (undef,$plotfile) = $self->io->tempfile(DIR    => $self->plot_dir, 
-						 UNLINK => 0,
-						 SUFFIX => ".$temp.ps");
-
-      system ("mv rna.ps $plotfile") ;
-      $img = {$temp => "$plotfile"};
-      
-    }
+#    if ($self->plot_dir){
+#      
+#      #draw structure
+#      system ("$convert_bin $ctfile > $prefix.$temp.vienna");
+#      system ("$draw_bin   < $prefix.$temp.vienna");
+#
+#      #RNAplot writes to rna.ps and can't be convinced to write to stdout.
+#      #use tempfile to get a name again
+#      #probly naview is the way forward. This'll do for now.
+#      my (undef,$plotfile) = $self->io->tempfile(DIR    => $self->plot_dir, 
+#						 UNLINK => 0,
+#						 SUFFIX => ".$temp.ps");
+#
+#      system ("mv rna.ps $plotfile") ;
+#      $img = {$temp => "$plotfile"};
+#      
+#    }
   }
 
 

@@ -48,7 +48,7 @@ chomp $identifier;
 
 my $min_amplicon = 90;
 my $max_amplicon = 200;
-my $tm_threshold = 70;
+my $tm_threshold = 65;
 
 
 # set params as per Manu's protocol:
@@ -101,7 +101,7 @@ my %primer3_params = (
 		      PRIMER_SELF_END           => 2,
 		      PRIMER_MAX_DIFF_TM        => 2,
 		      PRIMER_MAX_SIZE           => 27,
-		      PRIMER_NUM_RETURN         => 5
+		      PRIMER_NUM_RETURN         => 20
 		     );
 
 

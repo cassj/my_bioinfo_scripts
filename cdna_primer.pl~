@@ -1,10 +1,10 @@
 #!/usr/bin/perl
 
 
-=head1 seq_primer.pl
+=head1 cdna_primer.pl
 
   This script attempts to automate the Buckley lab
-  primer design protocol for a defined sequence
+  primer design protocol
 
 =cut
 
@@ -29,8 +29,8 @@ use Bio::Graphics;
 
 my $v = 1;
 
-my $report_file = "primer_report.txt";
-my $img_file = "primer_img.png";
+my $report_file = "cdna_primer_report.txt";
+my $img_file = "cdna_primer_img.png";
 my $img_size = 800;
 
 my $ignore_masking = 1;
@@ -41,9 +41,14 @@ my $species = <>;
 chomp $species;
 
 
+print "Enter the Ensembl Gene ID:\n";
+my $identifier = <>;
+chomp $identifier;
+
+
 my $min_amplicon = 90;
 my $max_amplicon = 200;
-my $tm_threshold = 63;
+my $tm_threshold = 70;
 
 
 # set params as per Manu's protocol:
@@ -73,6 +78,8 @@ my $tm_threshold = 63;
 #		     );
 #
 
+
+
 #Diogo's strict parameters
 my %primer3_params = (
 		      PRIMER_OPT_GC_PERCENT     => 60,
@@ -100,6 +107,8 @@ my %primer3_params = (
 
 
 
+
+
 #Again, as per Manu's protocol
 my %mfe_params = (
 		  NA        => 'DNA',
@@ -123,18 +132,174 @@ my @rm_params=(-species  => $species,
 open REPORT, ">$report_file" 
   or die "Can't open file $report_file for writing";
 
+print REPORT "cDNA Primer design for $identifier\n";
 
 
 
-print "Please enter your sequence:\n";
-my $target_seq = <>;
-chomp $target_seq;
+### Get the sequence. ###
+
+my $registry = 'Bio::EnsEMBL::Registry';
+
+$registry->load_registry_from_db( 
+ 				 -host => 'ensembldb.ensembl.org',
+ 				 -user => 'anonymous',
+ 				);
+
+# get an Ensembl gene adap for the species in question
+my $gene_ad = $registry->get_adaptor(
+				     $species,
+				     'core', 
+				     'Gene',
+				    );
+
+# get an Ensembl slice adap for the species in question
+my $slice_ad = $registry->get_adaptor(
+				      $species,
+				      'core',
+				      'Slice',
+				     );
+
+# get the gene.
+my $gene =$gene_ad->fetch_by_stable_id($identifier);
+
+# print some info about the gene
+print REPORT 'Gene: '.$gene->stable_id.' '.$gene->description."retrieved from Ensembl $species database\n" ;
+print REPORT "\tChromosome ".$gene->slice->seq_region_name;
+print REPORT ' (start: '.$gene->start.' end: '.$gene->end;
+print REPORT ' strand: '.$gene->strand.")\n";
+
+#and some to the screen
+print "\n\n".$gene->stable_id.' on strand '.$gene->strand.' at position '.$gene->start.'-'.$gene->end."\n";
+
+#get the transcripts and TSSs
+my @transcripts = @{$gene->get_all_Transcripts};
+print REPORT 'Gene has '.@transcripts. " transcripts\n";
+
+#get exons for each transcript
+my $n = scalar(@transcripts);
+
+my %trsc_exons;
+foreach my $trsc (@transcripts){
+  $trsc_exons{$trsc->stable_id} = $trsc->get_all_Exons;
+}
+
+
+my $trsc;
+if ($n>1){
+  print "\nThere are multiple transcripts for this gene: \n";
+
+  foreach my $t (@transcripts){
+    print "\n".$t->stable_id;
+    print " Known Coding" if $t->is_known;
+    print "\nExons:\n ";
+    foreach my $e ( @{$trsc_exons{$t->stable_id}} ){
+      print "\t".$e->stable_id.' '.$e->start.'-'.$e->end."\n";
+    }
+  }
+  print "\nPlease enter the ID of the transcript you would like to use: ";
+  
+  $trsc = <STDIN>;
+  chomp($trsc);
+  while (! $trsc_exons{$trsc}){
+    print "$trsc doesn't seem to be a valid transcript ID. Please try again or stop the program with ctrl-c: ";
+    $trsc = <STDIN>;
+    chomp($trsc);
+  }
+}
+else{
+  my $t = $transcripts[0];
+  $trsc = $t->stable_id;
+  print "\n".$t->stable_id;
+  print " Known Coding" if $t->is_known;
+  print "\nExons:\n ";
+  foreach my $e ( @{$trsc_exons{$t->stable_id}} ){
+    print "\t".$e->stable_id.' '.$e->start.'-'.$e->end."\n";
+  }
+}
+
+print "\nUsing $trsc \n";
+
+my %exons;
+foreach ( @{$trsc_exons{$trsc}} ){
+  $exons{$_->stable_id} = $_;
+#  print "\t".$_->stable_id.' ';
+} 
+#print "\n\n";
+
+my $e_n = scalar (keys %exons);
+
+my $target_seq;
+my @target_exon_ids;
+my $exon_bound = 1;
+
+#single exon?
+if ($e_n == 1){
+  print "Only one exon, so we'll just use that sequence. You will be unable to detect genomic contamination with this primer pair\n";
+  @target_exon_ids = scalar (keys %exons);
+  $exon_bound = 0;
+} 
+
+##just 2?
+#if ($e_n == 2){
+#  print "Only two exons, so we'll aim for that exon-exon boundary";
+#  #need to make sure these are the right way round.
+#   @target_exon_ids = keys %exons;
+#}
+
+#more than 2:
+if ($e_n >= 2){
+  print "Which exon-exon boundary should I aim for?\n ";
+  print "Please enter the ID of exon1: ";
+  my $exon1 = <STDIN>;
+  chomp($exon1);
+  while (! $exons{$exon1} ){
+    print "Invalid exon id. Try again, or stop the program with ctrl-c: ";
+    $exon1 = <STDIN>;
+    chomp($exon1); 
+  }
+  print "Please enter the ID of exon2: ";
+  my $exon2 = <STDIN>;
+  chomp($exon2);
+  while (! $exons{$exon2} ){
+    print "Invalid exon id. Try again, or stop the program with ctrl-c: ";
+    $exon2 = <STDIN>;
+    chomp($exon2); 
+  }  
+  @target_exon_ids = ($exon1,$exon2);
+}
+
+print "\n\nOK: using exon(s) ";
+foreach (@target_exon_ids){print "$_ "}
+print "\n\n";
+
+
+#ok, concat the sequence of the exons into our target;
+foreach (@target_exon_ids){
+  $target_seq .= $exons{$_}->seq->seq;
+}
+
+
+#get the transcript object and its Bio::Seq
+($trsc) = grep {$_->stable_id eq $trsc }@transcripts;
+my $full_seq= $trsc->seq;
+
+print REPORT "\nFull Transcript Sequence:\n".$full_seq->seq."\n";
+print REPORT "\nTarget Sequence:\n".$target_seq."\n\n";
+
+#and check that they haven't put an exon boundary that 
+#isn't really in the transcript sequence:
+die "That sequence doesn't exist in the transcript. Are you sure those exons are spliced next to each other?" unless $full_seq->seq =~ /$target_seq/;
+
+
+#get the start and end positions of the target:
+my $target_start = $exons{$target_exon_ids[0]}->start;
+my $target_end   = $exons{$target_exon_ids[-1]}->end;
 
 
 #turn the target seq into a Bio::Seq object
 $target_seq = Bio::Seq->new(
-			    -seq        => $target_seq,
-			    -primary_id => 'target_seq'
+			       -seq        => $target_seq,
+			       -primary_id => "Primer target seq from ".$trsc->stable_id,
 );
 
 
@@ -262,6 +427,22 @@ $panel->add_track($full_length,
                   -fgcolor => 'black',
                   -double  => 1,
                  );
+
+
+#exon boundary
+my $eb = $exons{$target_exon_ids[0]}->length;
+
+$eb = Bio::SeqFeature::Generic->new(
+				     -start => $eb,
+				     -end => $eb
+);
+
+$panel->add_track($eb,
+		  -glyph   => 'diamond',
+		  -fgcolor => 'green',
+);
+
+
 
 
 #this draws all the primers underneath

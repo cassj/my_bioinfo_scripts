@@ -56,12 +56,12 @@ ok(!$hsmin->has_seq, 'has_seq returns false OK');
 lives_and (sub {$hsmin->maxbp(30), 30}, 'PosInt checking passes OK');
 throws_ok {$hsmin->maxbp(0)} qr/ does not pass /, 'PosInt checking fails OK';
 
-#test PosOrZeroInt checking
+#test PosOrZeroFloat checking
 lives_and(sub {is $hsmin->sodium(0.05), 0.05}, 'PosOrZeroFloat checking passes OK' );
 throws_ok {$hsmin->sodium(-3)} qr/ does not pass /, 'PosOrZeroFloat checking fails negative OK';
 throws_ok {$hsmin->sodium("rhubarb")} qr/ does not pass /, 'PosOrZeroFloat checking fails string OK';
 
-#test PosOrZeroFloat checking
+#test PosOrZeroInt checking
 lives_and(sub {is $hsmin->tmin(10), 10 }, 'PosOrZeroInt checking passes OK' );
 throws_ok {$hsmin->tmin(-3)} qr/ does not pass /, 'PosOrZeroInt checking fails negative OK';
 throws_ok {$hsmin->tmin("rhubarb")} qr/ does not pass /, 'PosOrZeroInt checking fails string OK';

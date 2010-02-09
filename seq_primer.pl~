@@ -43,7 +43,7 @@ chomp $species;
 
 my $min_amplicon = 90;
 my $max_amplicon = 200;
-my $tm_threshold = 63;
+my $tm_threshold = 70;
 
 
 # set params as per Manu's protocol:
