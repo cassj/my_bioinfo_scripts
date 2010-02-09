@@ -28,8 +28,8 @@ data[,"Name"]<-paste(paste(data[,"Chr"],data[,"Start"],sep=":"),data[,"End"], se
 rd <- RangedData(ranges = IRanges(
                    start= data$Start,
                    end = data$End,
+                   names = as.character(data$Name),
                    ),
-                 names = as.character(data$Name),
                  space = as.character(data$Chr),
                  values = data[,values]
                  )

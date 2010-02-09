@@ -123,8 +123,8 @@ library(IRanges)
 rd <- RangedData(ranges = IRanges(
                    start= data\$Region.Start,
                    end = data\$Region.End,
+                  names = as.character(data\$PET.ID)
                    ),
-                 names = as.character(data\$PET.ID),
                  space = as.character(data\$Chromosome),
                  values = data[,
                    qw(RE1.Type,
