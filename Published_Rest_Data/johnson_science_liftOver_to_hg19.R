@@ -24,7 +24,7 @@ colnames(to.map) <- c("chr","start","end")
 mapped.hg19 <- liftOver(to.map , chain.file="lib/hg17ToHg19.over.chain")
 
 #and stick the results back in the dataframe
-data[,1:3] <- mapped.mm9[,qw(chr,start,end)] 
+data[,1:3] <- mapped.hg19[,qw(chr,start,end)] 
 
 #save the results
 outfile=sub('xls','hg19.xls',filename)
