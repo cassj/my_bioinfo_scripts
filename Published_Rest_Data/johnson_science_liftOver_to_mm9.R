@@ -20,8 +20,6 @@ if(ncol(data)==9){
 
 to.map<-data[,1:3]
 colnames(to.map) <- c("chr","start","end")
-#map hg17 to hg19
-mapped.hg19 <- liftOver(to.map , chain.file="lib/hg17ToHg19.over.chain")
 #the hg19 to mm9
 mapped.mm9 <- liftOver(mapped.hg19 , chain.file="lib/hg19ToMm9.over.chain")
 
@@ -29,5 +27,5 @@ mapped.mm9 <- liftOver(mapped.hg19 , chain.file="lib/hg19ToMm9.over.chain")
 data[,1:3] <- mapped.mm9[,qw(chr,start,end)] 
 
 #save the results
-outfile=sub('xls','mm9.xls',filename)
+outfile=sub('mm9.xls','hg19.xls',filename)
 write.table(data, file=outfile, sep="\t", col.names=F, row.names=F, quote=F)
