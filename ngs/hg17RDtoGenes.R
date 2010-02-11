@@ -10,7 +10,7 @@ library(ChIPpeakAnno)
 #We don't appear to have the current human dataset as a ChIPpeakAnno
 #dataset, so we'll have to use the getAnnotation function
 library(biomaRt)
-ensmart <- useMart("ensembl_mart_43", dataset="hsapiens_gene_ensembl")
+ensmart <- useMart("ensembl_mart_43", dataset="hsapiens_gene_ensembl", archive=T)
 TSS.human.NCBI35 <- getAnnotation(ensmart, featureType="TSS")
 
 #need to alter the names so they match ChIPpeakAnno
