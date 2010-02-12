@@ -27,5 +27,5 @@ mapped.hg19 <- liftOver(to.map , chain.file="lib/hg17ToHg19.over.chain")
 data[,1:3] <- mapped.hg19[,qw(chr,start,end)] 
 
 #save the results
-outfile=sub('xls','hg19.xls',filename)
-write.table(data, file=outfile, sep="\t", col.names=F, row.names=F, quote=F)
+outfile=sub('hg17','hg19',filename)
+write.table(data, file=outfile, sep="\t", col.names=T, row.names=F, quote=F)
