@@ -136,6 +136,10 @@ file 'scripts/annoRDtoCSV.R' => ['scripts'] do
     sh "wget -O scripts/annoRDtoCSV.R  'http://github.com/cassj/my_bioinfo_scripts/raw/master/ngs/annoRDtoCSV.R'"
 end 
 
+file 'scripts/pVal.R' => ['scripts'] do
+    sh "wget -O scripts/pVal.R  'http://github.com/cassj/my_bioinfo_scripts/raw/master/Published_Rest_Data/johnson_science_pval.R'"
+end 
+
 
 ## other libraries
 directory 'lib'
@@ -419,9 +423,6 @@ task :annotate_hg19_rd => hg19_anno do end
 
 
 
-
-
-
 ###
 # Export the annotated rd data to csv files 
 ###
@@ -441,13 +442,44 @@ task :export_to_csv => csv_files do end
 
 
 
+#add a col of pVal too
+rule(/^.*hg19\.AnnoRangedDatapVal\.csv$/ => [proc {|tn| tn.sub(/pVal/,'')}, 'scripts/pVal.R'
+]) do |t|
+    sh %Q(R --vanilla --args filename=\\"#{t.source}\\" < scripts/pVal.R)
+end  
+  
+csv_pval = csv_files.sub(/RangedData\.csv/, 'RangedDatapVal.csv')
+desc "add pVal data to hg19 data"
+task :hg19_pval => csv_pval do end
+
+
+
 task :default => ['fetch_publication', 'export_to_csv'] do 
 end
 
 
-rd = FileList['Rest_Macs/run*/*RangedData*']
+rd = FileList['Rest_Macs/run*/*RangedData.R*']
 task :clobber_rd => [] do
   rd.each do |f|
+     if File.exist?(f)
+        rm(f)
+     end
+  end
+end
+
+anno_rd = FileList['Rest_Macs/run*/*AnnoRangedData.R*']
+task :clobber_anno_rd => [] do
+  anno_rd.each do |f|
+     if File.exist?(f)
+        rm(f)
+     end
+  end
+end
+
+
+csv = FileList['Rest_Macs/run*/*csv']
+task :clobber_csv => [] do
+  csv.each do |f|
      if File.exist?(f)
         rm(f)
      end
