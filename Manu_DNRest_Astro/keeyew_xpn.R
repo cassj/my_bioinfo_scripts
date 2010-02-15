@@ -9,7 +9,7 @@ options(scipen=10)
 #load data
 data <- read.csv("expression_data/Astro-REST-DN-raw.csv", as.is=TRUE)
 
-cols <- qw(dn dn dn dn ev ev ev ev)
+cols <- qw(dn, dn, dn, dn, ev, ev, ev, ev)
 rownames(data)<-data[,1]
 n<-length(cols)
 data<-data[,2:(n+1)]
