@@ -26,6 +26,5 @@ data <- data.frame(data, End=mapped.mm9[,"end"])
 
 
 #save the results
-outfile=sub('html','txt',filename)
-outfile=sub('publication','results',outfile)
-write.table(data, file=outfile, sep="\t", col.names=F, row.names=T, quote=F)
+outfile='results/saco_mm9.txt'
+write.table(data, file=outfile, sep="\t", col.names=T, row.names=T, quote=F)
