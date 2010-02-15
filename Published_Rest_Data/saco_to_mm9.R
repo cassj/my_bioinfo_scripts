@@ -27,4 +27,5 @@ data <- data.frame(data, End=mapped.mm9[,"end"])
 
 #save the results
 outfile=sub('html','txt',filename)
+outfile=sub('publication','results',outfile)
 write.table(data, file=outfile, sep="\t", col.names=F, row.names=T, quote=F)
