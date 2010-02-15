@@ -9,4 +9,4 @@ data<-as.data.frame(data.annot)
 colnames(data)[1]<-"chr"
 
 newfile<-sub("\\.R", ".csv", filename)
-write.csv(data, file=newfile)
+write.csv(data, file=newfile, row.names=F)

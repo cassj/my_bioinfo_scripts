@@ -1,0 +1,457 @@
+###
+# Analysis of Johnson ChIPseq data (Wold lab)
+#
+###
+
+###
+# rake -T 
+# will summarise the analysis performed in this directory
+# rake 
+# wil rerun the analysis 
+###
+
+require 'rubygems'
+require 'fileutils'
+require 'rake/clean'
+
+directory "publication"
+CLOBBER.include('publication')
+
+directory "scripts"
+CLOBBER.include('scripts')
+CLEAN.include('scripts')
+
+directory "lib"
+CLOBBER.include('lib')
+CLEAN.include('lib')
+
+directory 'results'
+CLOBBER.include('results')
+
+
+### Fetch Publication and Supplemental Data
+
+## Note: the paper doesn't say otherwise, so I'm assuming all genome ranges are standard base-1, fully closed. 
+## as opposed to UCSC 0-based half-open. 
+
+file "publication/Johnson.pdf" => ["publication"] do
+  sh "wget -O publication/Johnson.pdf 'http://www.sciencemag.org/cgi/reprint/316/5830/1497.pdf'"
+end
+
+file 'publication/Supplemental.pdf' => ['publication'] do
+  sh "wget -O publication/Supplemental.pdf 'http://www.sciencemag.org/cgi/data/1141319/DC1/2'"
+end
+
+file 'publication/README' => ['publication'] do
+  sh "wget -O publication/README   'ftp://ftp.ncbi.nih.gov/pub/geo/DATA/supplementary/series/GSE13047/README.txt'"
+end
+
+
+file 'publication/GSE13047_RAW.tar' => ['publication'] do
+  sh "wget -O publication/GSE13047_RAW.tar 'ftp://ftp.ncbi.nih.gov/pub/geo/DATA/supplementary/series/GSE13047/GSE13047_RAW.tar'"
+end
+
+desc 'unpack_data'
+task :unpack_data => ['publication/GSE13047_RAW.tar'] do
+  unless (
+          File.exists?('publication/GSM327023_chipFC1592_uniq_hg17.txt') &&
+          File.exists?('publication/GSM327023_chipFC1862_uniq_hg17.txt') &&
+          File.exists?('publication/GSM327023_chipFC2002_uniq_hg17.txt') &&
+          File.exists?('publication/GSM327024_mockFC1592_uniq_hg17.txt') &&
+          File.exists?('publication/GSM327024_mockFC1862_uniq_hg17.txt') &&
+          File.exists?('publication/GSM327024_mockFC2002_uniq_hg17.txt')
+          )
+    sh "tar -xv -C publication -f publication/GSE13047_RAW.tar"
+    DATA = FileList['publication/GSM*.txt.gz']
+    DATA.each do |fn|
+      newfn = fn.sub(/\.gz$/, '')
+      sh "gunzip -c #{fn} > #{newfn}" 
+    end
+  end
+end 
+
+
+file 'publication/GSM327023_chipFC1592_uniq_hg17.txt' => ['unpack_data']do end
+file 'publication/GSM327023_chipFC1862_uniq_hg17.txt' => ['unpack_data']do end
+file 'publication/GSM327023_chipFC2002_uniq_hg17.txt' => ['unpack_data']do end
+
+file 'publication/GSM327024_mockFC1592_uniq_hg17.txt' => ['unpack_data']do end
+file 'publication/GSM327024_mockFC1862_uniq_hg17.txt' => ['unpack_data']do end
+file 'publication/GSM327024_mockFC2002_uniq_hg17.txt' => ['unpack_data']do end
+
+CLEAN.include('publication/*.gz')
+CLEAN.include('publication/*.tar')
+
+
+
+desc "Fetch Johnson et al"
+task :fetch_publication => ["publication/Johnson.pdf", "publication/Supplemental.pdf", 'publication/README', 'publication/GSE13047_RAW.tar','unpack_data' ]do
+end
+ 
+
+
+##scripts
+
+file 'scripts/to_hg17bed.pl' => ['scripts'] do
+  sh "wget -O scripts/to_hg17bed.pl  'http://github.com/cassj/my_bioinfo_scripts/raw/master/Published_Rest_Data/johnson_science_to_hg17bed.pl'"
+end
+
+file 'scripts/multi_macs.pl' => ['scripts'] do
+  sh "wget -O scripts/multi_macs.pl  'http://github.com/cassj/my_bioinfo_scripts/raw/master/Published_Rest_Data/multi_macs.pl'"
+end
+
+file 'scripts/qw.R' => ['scripts'] do
+  sh "wget -O scripts/qw.R  'http://github.com/cassj/my_bioinfo_scripts/raw/master/qw.R'"
+end
+
+file 'scripts/liftOver.R' => ['scripts'] do
+  sh "wget -O scripts/liftOver.R  'http://github.com/cassj/my_bioinfo_scripts/raw/master/liftOver.R'"
+end
+
+file 'scripts/liftOver_to_hg19.R' => ['scripts', 'scripts/liftOver.R', 'scripts/qw.R'] do
+  sh "wget -O scripts/liftOver_to_hg19.R  'http://github.com/cassj/my_bioinfo_scripts/raw/master/Published_Rest_Data/johnson_science_liftOver_to_hg19.R'"
+end
+
+file 'scripts/liftOver_to_mm9.R' => ['scripts', 'scripts/liftOver.R', 'scripts/qw.R'] do
+  sh "wget -O scripts/liftOver_to_mm9.R  'http://github.com/cassj/my_bioinfo_scripts/raw/master/Published_Rest_Data/johnson_science_liftOver_to_mm9.R'"
+end
+
+file 'scripts/peaksBed2IRanges.R' => ['scripts'] do 
+    sh "wget -O scripts/peaksBed2IRanges.R  'http://github.com/cassj/my_bioinfo_scripts/raw/master/ngs/macs/peaksBed2IRanges.R'"
+end
+
+file 'scripts/hg17RDtoGenes.R' => ['scripts'] do
+    sh "wget -O scripts/hg17RDtoGenes.R  'http://github.com/cassj/my_bioinfo_scripts/raw/master/ngs/hg17RDtoGenes.R'"
+end 
+
+file 'scripts/hg19RDtoGenes.R' => ['scripts'] do 
+    sh "wget -O scripts/hg19RDtoGenes.R  'http://github.com/cassj/my_bioinfo_scripts/raw/master/ngs/hg19RDtoGenes.R'"
+end
+
+file 'scripts/mm9RDtoGenes.R' => ['scripts'] do
+    sh "wget -O scripts/mm9RDtoGenes.R  'http://github.com/cassj/my_bioinfo_scripts/raw/master/ngs/mm9RDtoGenes.R'"
+end
+
+file 'scripts/annoRDtoCSV.R' => ['scripts'] do
+    sh "wget -O scripts/annoRDtoCSV.R  'http://github.com/cassj/my_bioinfo_scripts/raw/master/ngs/annoRDtoCSV.R'"
+end 
+
+
+## other libraries
+directory 'lib'
+CLOBBER.include('lib')
+CLEAN.include('lib')
+
+file 'lib/hg17ToHg19.over.chain' => ['lib'] do
+  sh "wget -O lib/hg17ToHg19.over.chain.gz http://hgdownload.cse.ucsc.edu/goldenPath/hg17/liftOver/hg17ToHg19.over.chain.gz"
+  sh "gunzip -c lib/hg17ToHg19.over.chain.gz > lib/hg17ToHg19.over.chain"
+end
+
+file 'lib/hg19ToMm9.over.chain' => ['lib'] do
+  sh "wget -O lib/hg19ToMm9.over.chain.gz http://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToMm9.over.chain.gz"
+  sh "gunzip -c lib/hg19ToMm9.over.chain.gz > lib/hg19ToMm9.over.chain"
+end
+
+
+####
+# The tags they used are in the uniq files. Each has a single hit to hg17
+# I can't work out what the hg18 files are so I'm ignoring them.
+
+#File format for uniq tags is:
+#Column 1: tag sequence
+#Column 2: alignment score
+#Column 3: # of hit in the genome, 1 = unique hit
+#Column 4: Chr position
+#Column 5: Chr direction
+#Column 6: matched genome sequence
+#Column 7: next best possible alignment score
+
+
+###
+# Make bed files of the data, converting to UCSC 0-based/half-open intervals
+
+rule(/results\/.*uniq_hg17.bed$/ => [proc{|tn| tn.sub(/results/, 'publication').sub(/bed/,'txt')}, 'scripts/to_hg17bed.pl', 'results'
+]) do |t|
+  sh "perl scripts/to_hg17bed.pl #{t.source} > #{t.name}"
+end
+
+uniq_files = FileList["publication/*uniq_hg17.txt"]
+hg17_bed_files = uniq_files.sub(/txt/,'bed').sub(/publication/, 'results')
+
+desc "make all hg17 bed files"
+task :hg17_bed => hg17_bed_files do end
+
+
+###
+# Merge tech reps
+#
+# from the paper, supp methods and geo, I am still unclear what the 3 different files are
+# (having already discounted the hg18 data)
+# Presumably FC refers to flowcell, so my guess would be that the 3 are same IP, different 
+# rows / cells (ie tech reps not bio reps), so I'm just merging them into one bed file 
+
+mock_hg17_bed_files = hg17_bed_files.grep(/mock/)
+ip_hg17_bed_files = hg17_bed_files.grep(/chip/)
+
+file 'results/IP_hg17.bed' => ip_hg17_bed_files do 
+  sh "cat #{ip_hg17_bed_files} > results/IP_hg17.bed"
+end
+
+file 'results/Mock_hg17.bed' => mock_hg17_bed_files do 
+  sh "cat #{mock_hg17_bed_files} > results/Mock_hg17.bed"
+end
+
+
+
+###
+# run Macs on the hg17 data
+
+# from the paper, supp methods and geo, I am still unclear what the 3 different files are
+# (having already discounted the hg18 data)
+# Presumably FC refers to flowcell, so my guess would be that the 3 are same IP, different 
+# rows / cells (ie tech reps not bio reps). 
+directory 'Rest_Macs'
+CLOBBER.include('Rest_Macs')
+
+desc 'macs peak finding'
+task :run_macs => ['scripts/multi_macs.pl', 'results/IP_hg17.bed', 'results/Mock_hg17.bed', 'Rest_Macs'] do
+  puts "Careful - this does nohup cmd & so make SURE it has finished before doing the next step"
+  sh "nohup perl scripts/multi_macs.pl results/IP_hg17.bed results/Mock_hg17.bed Rest_Macs &"
+end
+
+uniq_files = FileList["publication/*uniq_hg17.txt"]
+bed_files = FileList["Rest_Macs/run*/*peaks.bed"]
+
+###
+# make the hg17 bed files.
+# can't liftOver the ones straight from Macs cos they have a header
+
+rule(/Rest_Macs\/run*.\/.*\.hg17\.bed$/  => [proc {|tn| tn.sub(/\.hg17\.bed$/,'.bed')}
+]) do |t|
+  sh "awk /^chr/ #{t.source} > #{t.name}" 
+end
+
+hg17_bed_files = bed_files.sub(/bed/,'hg17.bed')
+
+desc "make all hg17 bed files"
+task :hg17_bed => hg17_bed_files do end
+
+
+###
+# map the hg17 Macs files to hg19
+
+rule(/Rest_Macs\/run*.\/.*\.hg19\.bed$/  => [proc {|tn| tn.sub(/hg19/,'hg17')}, 'lib/hg17ToHg19.over.chain'
+]) do |t|
+  sh "liftOver #{t.source} lib/hg17ToHg19.over.chain #{t.name} /dev/null"
+end
+
+hg19_bed_files = hg17_bed_files.sub(/hg17/,'hg19')
+
+desc "make all hg19 bed files"
+task :hg19_bed => hg19_bed_files do end
+
+
+###
+# map the hg19 files to mm9
+rule(/Rest_Macs\/run*.\/.*\.mm9\.bed$/  => [proc {|tn| tn.sub(/mm9/,'hg19')}, 'lib/hg19ToMm9.over.chain'
+]) do |t|
+  sh "liftOver #{t.source} lib/hg19ToMm9.over.chain #{t.name} /dev/null"
+end
+
+mm9_bed_files = hg19_bed_files.sub(/hg19/,'mm9')
+
+desc "make all mm9 bed files"
+task :mm9_bed => mm9_bed_files do end
+
+
+
+
+###
+# Deal wth the xls files
+
+xls_files = FileList['Rest_Macs/run*/*peaks.xls']
+
+###
+#make hg17 xls files by stripping the header
+
+rule(/^.*peaks\.hg17\.xls$/ => [proc {|tn| tn.sub(/\.hg17\.xls/,'.xls')}
+]) do |t|
+ sh "awk /^chr/ #{t.source} > #{t.name} "
+end
+hg17_xls_files = xls_files.sub('xls', 'hg17.xls')
+desc "make all hg17 xls files"
+task :hg17_xls => hg17_xls_files do end
+
+
+###
+# liftOver xls files to hg19
+
+rule(/^.*peaks\.hg19\.xls$/ => [proc {|tn| tn.sub(/\.hg19\.xls/,'.hg17.xls')}, 'scripts/liftOver_to_hg19.R'
+]) do |t|
+    sh %Q(R --vanilla --args filename=\\"#{t.source}\\" < scripts/liftOver_to_hg19.R)
+end
+hg19_xls_files = xls_files.sub('xls', 'hg19.xls')
+desc "make all hg19 xls files"
+task :hg19_xls => hg19_xls_files do end
+
+
+
+###
+# liftOver hg19.xls files to mm9
+
+rule(/^.*peaks\.mm9\.xls$/ => [proc {|tn| tn.sub(/\.mm9\.xls/,'.hg19.xls')}, 'scripts/liftOver_to_mm9.R'
+]) do |t|
+    sh %Q(R --vanilla --args filename=\\"#{t.source}\\" < scripts/liftOver_to_mm9.R)
+end
+
+mm9_xls_files = xls_files.sub('xls', 'mm9.xls')
+desc "make all mm9 xls files"
+task :mm9_xls => mm9_xls_files do end
+
+
+
+task :clobber_xls => [] do 
+  xls = FileList['Rest_Macs/run*/*hg19.xls'] | FileList['Rest_Macs/run*/*mm9.xls']
+  xls.each do |f|
+    if File.exist?(f)
+      rm(f)
+    end
+  end
+end
+
+
+###
+# OK, liftover doesn't fare very well between species, so convert both mm9 and hg17 and 
+# hg19 files to IRanges and annotatet with nearest genes. We can compare other datasets on
+# the basis of position with the mm9 and nearest gene with the hg17/9
+
+
+
+###
+# Turn macs peaks into IRanges
+###
+
+#R --vanilla --args filename=\"Mash_Macs/run1/NA_peaks.xls\"
+#R --vanilla --args filename=\"Mash_Macs/run1/NA_negative_peaks.xls\"
+
+#this will catch both mm9, hg19 and original hg17 data including the negative peaks files
+RangedData_fail = FileList[]
+rule(/^.*\.RangedData.R$/ => [proc {|tn| tn.sub(/\.RangedData\.R/,'.xls')}, 'scripts/peaksBed2IRanges.R'
+]) do |t|
+    #for some cases, there is nothing in the mm9 map, so the R code can fail. Just catch it and 
+    #alert the user then move on to the next one.
+    begin
+        sh %Q(R --vanilla --args filename=\\"#{t.source}\\" < scripts/peaksBed2IRanges.R)    
+        rescue Exception => rfail
+        RangedData_fail.include(t.name)
+    end
+    puts RangedData_fail
+end
+
+
+macs_files = FileList['*Macs/run*/*.xls']
+macs_files = macs_files.sub(/\.xls/,  '.RangedData.R')
+
+desc "Convert Macs output to BioC IRanges RangedData objects"
+task :macs_to_iranges => macs_files do end
+
+#these can't just be .sub'd from the macs_files list because some 
+#may fail and not exist.
+hg17_rd = FileList['Rest_Macs/run*/*peaks.RangedData*']
+hg19_rd = FileList['Rest_Macs/run*/*hg19.RangedData*']
+mm9_rd  = FileList['Rest_Macs/run*/*mm9.RangedData*']
+
+#The fails:
+#Rest_Macs/run9/NA_negative_peaks.mm9.RangedData.R
+#Rest_Macs/run9/NA_peaks.mm9.RangedData.R
+#Rest_Macs/run5/NA_negative_peaks.mm9.RangedData.R
+#Rest_Macs/run5/NA_peaks.mm9.RangedData.R
+#Rest_Macs/run7/NA_negative_peaks.mm9.RangedData.R
+#Rest_Macs/run7/NA_peaks.mm9.RangedData.R
+#Rest_Macs/run1/NA_negative_peaks.mm9.RangedData.R
+#Rest_Macs/run1/NA_peaks.mm9.RangedData.R
+#Rest_Macs/run4/NA_negative_peaks.mm9.RangedData.R
+#Rest_Macs/run4/NA_peaks.mm9.RangedData.R
+#Rest_Macs/run8/NA_negative_peaks.mm9.RangedData.R
+#Rest_Macs/run8/NA_peaks.mm9.RangedData.R
+#Rest_Macs/run6/NA_negative_peaks.mm9.RangedData.R
+#Rest_Macs/run6/NA_peaks.mm9.RangedData.R
+#Rest_Macs/run2/NA_negative_peaks.mm9.RangedData.R
+#Rest_Macs/run2/NA_peaks.mm9.RangedData.R
+#Rest_Macs/run3/NA_negative_peaks.mm9.RangedData.R
+#Rest_Macs/run3/NA_peaks.mm9.RangedData.R
+
+#ok, all of the mm9 data is failing, I'm don't think there's anything wrong with
+#the code, so I have to assume liftover just can't handle the cross-species thing.
+#we'll just annotate the hg* data:
+
+###
+# Annotate all of the macs IRanges objects with their nearest genes
+# obviously need to do diff genomes separately
+###
+
+#R --vanilla --args filename=\"Pax6_Macs/run1/NA_peaks.RangedData.R\"
+
+#we can't annotate the original hg17 data cos it's too old - the relevant
+#ensembl database isn't in Biomart
+
+#this will get the hg19
+rule(/^.*hg19\.AnnoRangedData\.R$/ => [proc {|tn| tn.sub(/Anno/,'')}, 'scripts/hg19RDtoGenes.R'
+]) do |t|
+    sh %Q(R --vanilla --args filename=\\"#{t.source}\\" < scripts/hg19RDtoGenes.R)
+end
+
+hg19_anno = hg19_rd.sub(/\.RangedData\.R/, '.AnnoRangedData.R')
+desc "Annotate hg19 Macs RangedData objects with their nearest genes"
+task :annotate_hg19_rd => hg19_anno do end
+
+##this will get the mm9
+#rule(/^.*peaks\.mm9\.AnnoRangedData.R$/ => [proc {|tn| tn.sub(/Anno/,'')}, 'scripts/mm9RDtoGenes.R'
+#]) do |t|
+#    sh %Q(R --vanilla --args filename=\\"#{t.source}\\" < scripts/mm9RDtoGenes.R)
+#end
+#
+#mm9_anno = mm9_rd.sub(/\.RangedData\.R/, '.AnnoRangedData.R')
+#
+#desc "Annotate mm9 Macs RangedData objects with their nearest genes"
+#task :annotate_mm9_rd => mm9_anno do end
+
+
+
+
+
+
+
+###
+# Export the annotated rd data to csv files 
+###
+
+#R --vanilla --args filename=\"Pax6_Macs/run1/NA_peaks.AnnoRangedData.R\"
+
+rule(/.*AnnoRangedData.csv$/ => [proc {|tn| tn.sub(/\.csv/,'.R')}, 'scripts/annoRDtoCSV.R'
+]) do |t|
+    sh %Q(R --vanilla --args filename=\\"#{t.source}\\" < scripts/annoRDtoCSV.R)
+end
+
+csv_files = hg19_anno.sub(/\.R/, '.csv') 
+
+desc "Export all annotated ranged data to csv"
+task :export_to_csv => csv_files do end
+
+
+
+
+task :default => ['fetch_publication', 'export_to_csv'] do 
+end
+
+
+rd = FileList['Rest_Macs/run*/*RangedData*']
+task :clobber_rd => [] do
+  rd.each do |f|
+     if File.exist?(f)
+        rm(f)
+     end
+  end
+end
+
+
