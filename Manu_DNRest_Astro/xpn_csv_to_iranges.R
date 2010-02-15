@@ -3,8 +3,8 @@ source("scripts/liftOver.R")
 
 
 #load both limma and ly results:
-ky<-read.csv("[% cell_line %]/expression_data/ky_results.csv")
-limma <- read.csv("[% cell_line %]/expression_data/limma_results.csv")
+ky<-read.csv("expression_data/ky_results.csv")
+limma <- read.csv("expression_data/limma_results.csv")
 limma<-limma[,-1]
 colnames(ky)[1] <-"IlluminaID"
 colnames(limma)[1]<-"IlluminaID"
@@ -27,14 +27,14 @@ old.annot<-read.csv("lib/IlluminaMouseV1.txt", sep="\t", header=T)
 #but very few, so let's just remove the dups and go with the probe locations:
 old.annot<-old.annot[!duplicated(old.annot[,2]),]
 rownames(old.annot)<-old.annot[,2]
-limma.annot<-cbind(limma, old.annot[as.character(limma\$IlluminaID),])
-ky.annot<-cbind(ky, old.annot[as.character(ky\$IlluminaID),])
+limma.annot<-cbind(limma, old.annot[as.character(limma$IlluminaID),])
+ky.annot<-cbind(ky, old.annot[as.character(ky$IlluminaID),])
 
 #ditch anything for which we have no annotation
-remove<-which(is.na(limma.annot\$Chromosome))
+remove<-which(is.na(limma.annot$Chromosome))
 limma.annot<-limma.annot[-remove,]
 
-remove<-which(is.na(ky.annot\$Chromosome))
+remove<-which(is.na(ky.annot$Chromosome))
 ky.annot<-ky.annot[-remove,]
 
 #and liftOver the mm8 probe positions
@@ -49,12 +49,11 @@ mapped <- liftOver(to.map , chain.file="lib/mm8ToMm9.over.chain")
 ky.annot[,qw(Chromosome, Start, End)] <- mapped[,qw(chr,start,end)]
 
 #ditch anything for which we have no region
-remove<-which(is.na(limma.annot\$Chromosome))
+remove<-which(is.na(limma.annot$Chromosome))
 limma.annot<-limma.annot[-remove,]
 
-remove<-which(is.na(ky.annot\$Chromosome))
+remove<-which(is.na(ky.annot$Chromosome))
 ky.annot<-ky.annot[-remove,]
-
 
 
 #create a RangedData object for the region start and end:
@@ -67,11 +66,11 @@ colnames(ky.annot)[c(1,2,3,4,5,22,23)]<-qw(IlluminaSentrixTargetID, log2FoldChan
 
 #we have to give them names to avoid a bug in ChIPpeakAnnot if we want to use it later
 rd.limma <- RangedData(ranges = IRanges(
-        	           start= limma.annot\$Start,
-                	   end = limma.annot\$End,
-	                   names = as.character(limma.annot\$IlluminaSentrixTargetID),
+        	           start= limma.annot$Start,
+                	   end = limma.annot$End,
+	                   names = as.character(limma.annot$IlluminaSentrixTargetID),
                    ),
-                 space = as.character(limma.annot\$Chromosome),
+                 space = as.character(limma.annot$Chromosome),
                  values = limma.annot[,
                    qw(log2FoldChange, AveExpr,t,pVal, FDR, B, Search_key0, Target0, 
                       ProbeId0, Transcript0, Accession0, Symbol0, Definition0, Sequence,
@@ -83,12 +82,13 @@ rd.limma <- RangedData(ranges = IRanges(
 
 #we have to give them names to avoid a bug in ChIPpeakAnnot if we want to use it later
 rd.ky <- RangedData(ranges = IRanges(
-                           start= ky.annot\$Start,
-                           end = ky.annot\$End,
-	                   names = as.character(ky.annot\$IlluminaSentrixTargetID)
+                      start= ky.annot$Start,
+                      end = ky.annot$End,
+                      names = as.character(ky.annot$IlluminaSentrixTargetID),
+
                    ),
-                 space = as.character(ky.annot\$Chromosome),
-                 values = ky.annot[,
+                    space = as.character(ky.annot$Chromosome),
+                    values = ky.annot[,
                    qw(log2FoldChange, FoldChange, pVal, FDR, Search_key0, Target0,  
                       ProbeId0, Transcript0, Accession0, Symbol0, Definition0, Sequence,
                       Strand, Cytoband, BlastHitType, OtherHits, SpliceJunction, PerfectMatch,
@@ -97,9 +97,11 @@ rd.ky <- RangedData(ranges = IRanges(
                       )]
                  )
 
+
+
 #And save the result
-save(rd.limma, file="[% cell_line %]/expression_data/RangedData_Limma.R")
-save(rd.ky, file="[% cell_line %]/expression_data/RangedData_KY.R")
+save(rd.limma, file="expression_data/RangedData_Limma.R")
+save(rd.ky, file="expression_data/RangedData_KY.R")
 
              
 
