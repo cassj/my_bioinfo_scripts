@@ -6,12 +6,10 @@ use warnings;
 use IO::File;
 use Cwd;
 
-
-#gah. Getopt, when I have time.
 my $cmd = 'macs';
 my $treatment = $ARGV[0];
 my $control = $ARGV[1];
-my $outdir = $ARGV[2] || getcwd;
+my $outdir = $ARGV[2] || '.';
 
 my $genome_size = 2700000000; #this is the macs default anyway
 
@@ -23,20 +21,10 @@ my @pvalue = (0.001);
 my $count = 1;
 
 my $readme = new IO::File;
-$readme->open('>README') or die "Can't open file README for writing";
-
-if (-e $outdir){
-    opendir DIR, $outdir;
-    if(grep !/^\.+$/, readdir(DIR)){
-	die "Directory $outdir exists and is not empty.";
-    }
-
-}else{
-    `mkdir $outdir`;
-}
-
+$readme->open(">$outdir/README") or die "Can't open file README for writing";
 
 my $dir = getcwd;
+
 
 #for each combinations of variable parameters, run macs.
 foreach my $bw (@bandwidth){
@@ -44,13 +32,14 @@ foreach my $bw (@bandwidth){
         foreach my $pvalue (@pvalue){
 
             print "Running for BW: $bw ; MFOLD: $mfold ;  PVAL: $pvalue\n";
+	    my $cmd = "macs -t '$dir/$treatment' --gsize $genome_size --bw $bw --mfold $mfold --pvalue $pvalue --format BED";
+	    $cmd .= " -c '$dir/$control'" if $control;
 
-            print $readme "$outdir/run$count\tmacs -t '$dir/$treatment' -c '$dir/$control' --gsize $genome_size --bw $bw --mfold $mfold --pvalue $pvalue --format BED\n";
+            print $readme "$outdir/run$count\t$cmd\n";
 
-            `mkdir $outdir/run$count`;
+            system("mkdir $outdir/run$count");
             chdir("$outdir/run$count");
-            
-            my $out = `macs -t '$dir/$treatment' -c '$dir/$control' --gsize $genome_size --bw $bw --mfold $mfold --pvalue $pvalue --format BED  2>&1`;
+            my $out = `$cmd 2>&1`;
             my $outfh = new IO::File;
             $outfh->open(">out.txt");
             print $outfh $out;
@@ -69,5 +58,6 @@ foreach my $bw (@bandwidth){
 }
 
 $readme->close;
+
 
 
