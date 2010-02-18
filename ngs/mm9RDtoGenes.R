@@ -39,7 +39,8 @@ more.annot <- more.annot[-1*(which(duplicated(more.annot[,c(1,3)]))),]
 rownames(more.annot) <- more.annot[,"ensembl_gene_id"]
 
 #add this extra data to the data.annot
-data.annot <- data.frame(data.annot, more.annot[data.annot[,"feature"],])
+ord <- as.character(data.annot[,"feature"])
+data.annot <- data.frame(data.annot, more.annot[ord,])
 
 #and add all of this to your original rd
 rd<-as.data.frame(rd)
@@ -74,3 +75,6 @@ rd.annot <- RangedData(ranges = IRanges(
 
 newfile<-sub("RangedData", "AnnoRangedData", filename)
 save(rd.annot, file=newfile)
+
+
+
