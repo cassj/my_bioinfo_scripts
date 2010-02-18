@@ -4,7 +4,7 @@ source("scripts/qw.R")
 #call like R --vanilla --args filename=\"thing\"
 args<-commandArgs()
 eval(parse(text=args[grep('filename', args)]))
-load(filename)
+rd <- get(load(filename))
 
 library(ChIPpeakAnno)
 
@@ -42,6 +42,9 @@ rownames(more.annot) <- more.annot[,"ensembl_gene_id"]
 ord <- as.character(data.annot[,"feature"])
 data.annot <- data.frame(data.annot, more.annot[ord,])
 
+colnames(data.annot) <- qw(gene.space, gene.start, gene.end, gene.width, gene.names, gene.strand, ensembl.gene.id, gene.start.position, gene.end.position,
+                           peak.inside.gene, distance.to.gene, ensembl.gene.id2, mgi.symbol, description)
+
 #and add all of this to your original rd
 rd<-as.data.frame(rd)
 nms<-as.character(rd$names)
@@ -50,16 +53,10 @@ data.annot<-data.annot[nms,]   #sort annotation to same order as rd
 rd<-cbind(rd, data.annot) 
 
 colnames(rd)<-gsub( "values.","", colnames(rd))
-colnames(rd)[17] <- "gene.strand"
-colnames(rd)[19] <- "gene.start"
-colnames(rd)[20] <- "gene.end"
-colnames(rd)[21] <- "is.inside.gene"
-colnames(rd)[22] <- "distance.to.gene"
-colnames(rd)[23] <- "ensembl.gene.id"
-colnames(rd)[24] <- "gene.mgi.symbol"
-colnames(rd)[25] <- "gene.description"
 
-values<-qw(Length, Summit, nTags, neg10log10pVal, FoldEnrichment, FDR, gene.strand, gene.start, gene.end, is.inside.gene, distance.to.gene, ensembl.gene.id, gene.mgi.symbol, gene.description) 
+values <- qw(Length,  Summit, nTags,neg10log10pVal, FoldEnrichment, ensembl.gene.id,gene.strand, gene.start.position, gene.end.position, peak.inside.gene, distance.to.gene, mgi.symbol, description  )
+
+if ("values" %in%  colnames(rd)) {values <- c(values,"FDR")} 
 
 rd.annot <- RangedData(ranges = IRanges(
                                    start= rd$start,
@@ -75,6 +72,7 @@ rd.annot <- RangedData(ranges = IRanges(
 
 newfile<-sub("RangedData", "AnnoRangedData", filename)
 save(rd.annot, file=newfile)
+
 
 
 
