@@ -14,7 +14,6 @@ data(TSS.mouse.NCBIM37)
 #need to alter the names so they match ChIPpeakAnno
 names(rd)<-gsub("chr","",names(rd))
 
-#shit, this won't work if we have random in them
 data.annot <- annotatePeakInBatch(rd, AnnotationData=TSS.mouse.NCBIM37)
 
 data.annot <- as.data.frame(data.annot)

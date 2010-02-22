@@ -56,10 +56,10 @@ remove<-which(is.na(ky.annot\$Chromosome))
 ky.annot<-ky.annot[-remove,]
 
 #we can't use anything mapped to a random chr, so
-ids<-grep('random', ky.annot$Chromosome)
+ids<-grep('random', ky.annot\$Chromosome)
 ky.annot<-ky.annot[(-1*ids),]
 
-ids<-grep('random', limma.annot$Chromosome)
+ids<-grep('random', limma.annot\$Chromosome)
 limma.annot<-limma.annot[(-1*ids),]
 
 
