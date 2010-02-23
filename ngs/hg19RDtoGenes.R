@@ -21,24 +21,18 @@ if (length(id)>0){
 }
 
 
-data.annot <- annotatePeakInBatch(rd, AnnotationData=TSS.mouse.NCBIM37)
-
-data.annot <- as.data.frame(data.annot)
-rownames(data.annot) <- as.character(data.annot$names)
-
-#and that only gives you the ensembl gene ID, so get extra info:
-
-library(biomaRt)
-ensmart <- useMart("ensembl", dataset="hsapiens_gene_ensembl")
+#fetch nearest gene annot with ChIPpeakAnno
 TSS.human.GRCh37 <- getAnnotation(ensmart, featureType="TSS")
 
-#need to alter the names so they match ChIPpeakAnno
-names(rd)<-gsub("chr","",names(rd))
 data.annot <- annotatePeakInBatch(rd, AnnotationData=TSS.human.GRCh37)
 data.annot <- as.data.frame(data.annot)
 rownames(data.annot) <- as.character(data.annot$names)
 
+
 #and that only gives you the ensembl gene ID, so get extra info:
+library(biomaRt)
+ensmart <- useMart("ensembl", dataset="hsapiens_gene_ensembl")
+
 filters <- c("ensembl_gene_id")
 values<-unique(as.character(values(data.annot)[,"feature"]))
 attributes <- c("ensembl_gene_id","hgnc_symbol", "description")
@@ -57,9 +51,6 @@ rownames(more.annot) <- more.annot[,"ensembl_gene_id"]
 ord <- as.character(data.annot[,"feature"])
 data.annot <- data.frame(data.annot, more.annot[ord,])
 
-colnames(data.annot) <- qw(gene.space, gene.start, gene.end, gene.width, gene.names, gene.strand, ensembl.gene.id, gene.start.position, gene.end.position,
-                           peak.inside.gene, distance.to.gene, ensembl.gene.id2, mgi.symbol, description)
-
 #and add all of this to your original rd
 rd<-as.data.frame(rd)
 nms<-as.character(rd$names)
@@ -71,7 +62,7 @@ colnames(rd)<-gsub( "values.","", colnames(rd))
 
 #pull out the values cols
 rm.cols<-qw(start, end, names, space, width)
-values<- colnames(rd)[!colnames(rd) %in%rm.cols]
+values<- colnames(rd)[!colnames(rd) %in% rm.cols]
 
 
 rd.annot <- RangedData(ranges = IRanges(
