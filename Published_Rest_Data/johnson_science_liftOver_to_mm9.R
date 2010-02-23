@@ -27,4 +27,4 @@ data[,1:3] <- mapped.mm9[,qw(chr,start,end)]
 
 #save the results
 outfile=sub('hg19','mm9',filename)
-write.table(data, file=outfile, sep="\t", col.names=F, row.names=T, quote=F)
+write.table(data, file=outfile, sep="\t", col.names=T, row.names=F, quote=F)

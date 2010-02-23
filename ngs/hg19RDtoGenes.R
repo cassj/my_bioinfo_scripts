@@ -1,4 +1,3 @@
-
 library(IRanges)
 source("scripts/qw.R")
 
@@ -9,8 +8,26 @@ rd <- get(load(filename))
 
 library(ChIPpeakAnno)
 
-#We don't appear to have the current human dataset as a ChIPpeakAnno
-#dataset, so we'll have to use the getAnnotation function
+#load mouse transcripts
+data(TSS.mouse.NCBIM37)
+
+#remove "chr" prefix for  ChIPpeakAnno
+names(rd)<-gsub("chr","",names(rd))
+
+#change "M" to "MT" for ChIPpeakAnno
+id<-which(names(rd)=="M")
+if (length(id)>0){
+   names(rd)[id]<-"MT"
+}
+
+
+data.annot <- annotatePeakInBatch(rd, AnnotationData=TSS.mouse.NCBIM37)
+
+data.annot <- as.data.frame(data.annot)
+rownames(data.annot) <- as.character(data.annot$names)
+
+#and that only gives you the ensembl gene ID, so get extra info:
+
 library(biomaRt)
 ensmart <- useMart("ensembl", dataset="hsapiens_gene_ensembl")
 TSS.human.GRCh37 <- getAnnotation(ensmart, featureType="TSS")
@@ -52,9 +69,10 @@ rd<-cbind(rd, data.annot)
 
 colnames(rd)<-gsub( "values.","", colnames(rd))
 
-values <- qw(Length,  Summit, nTags,neg10log10pVal, FoldEnrichment, ensembl.gene.id,gene.strand, gene.start.position, gene.end.position, peak.inside.gene, distance.to.gene, mgi.symbol, description  )
+#pull out the values cols
+rm.cols<-qw(start, end, names, space, width)
+values<- colnames(rd)[!colnames(rd) %in%rm.cols]
 
-if ("values" %in%  colnames(rd)) {values <- c(values,"FDR")} 
 
 rd.annot <- RangedData(ranges = IRanges(
                                    start= rd$start,
@@ -70,6 +88,13 @@ rd.annot <- RangedData(ranges = IRanges(
 
 newfile<-sub("RangedData", "AnnoRangedData", filename)
 save(rd.annot, file=newfile)
+
+
+
+
+
+
+
 
 
 

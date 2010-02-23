@@ -11,8 +11,15 @@ library(ChIPpeakAnno)
 #load mouse transcripts
 data(TSS.mouse.NCBIM37)
 
-#need to alter the names so they match ChIPpeakAnno
+#remove "chr" prefix for  ChIPpeakAnno
 names(rd)<-gsub("chr","",names(rd))
+
+#change "M" to "MT" for ChIPpeakAnno
+id<-which(names(rd)=="M")
+if (length(id)>0){
+   names(rd)[id]<-"MT"
+}
+
 
 data.annot <- annotatePeakInBatch(rd, AnnotationData=TSS.mouse.NCBIM37)
 
@@ -54,9 +61,10 @@ rd<-cbind(rd, data.annot)
 
 colnames(rd)<-gsub( "values.","", colnames(rd))
 
-values <- qw(Length,  Summit, nTags,neg10log10pVal, FoldEnrichment, ensembl.gene.id,gene.strand, gene.start.position, gene.end.position, peak.inside.gene, distance.to.gene, mgi.symbol, description  )
+#pull out the values cols
+rm.cols<-qw(start, end, names, space, width)
+values<- colnames(rd)[!colnames(rd) %in%rm.cols]
 
-if ("values" %in%  colnames(rd)) {values <- c(values,"FDR")} 
 
 rd.annot <- RangedData(ranges = IRanges(
                                    start= rd$start,
