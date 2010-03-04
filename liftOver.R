@@ -18,6 +18,8 @@
 
 liftOver<-function(data, chain.file, ucsc.format=T, chr.col="chr", start.col="start",end.col="end"){
 
+  data<-to.map[20975:20980,]
+
   #data should be a matrix or dataframe with cols for chr, start and end
   #TODO: Or a RangedData / IRange object, 
  
@@ -46,6 +48,9 @@ liftOver<-function(data, chain.file, ucsc.format=T, chr.col="chr", start.col="st
   
   ##all this stuff should be a .C() call but I don't have time to make it work just now.
   in.bed <- tempfile()
+
+  #need to watch we don't get scientific notation printed out
+  options(scipen=10)
   write.table(this, file=in.bed, sep="\t", row.names=F, col.names=F, quote=F)
 
   out.bed <- tempfile()
