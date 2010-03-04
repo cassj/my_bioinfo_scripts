@@ -12,16 +12,16 @@ liftOver.sorted <- function(data){
   #liftover and append to outfile
   #liftOver expects bed, which is chr start end and
   #intervals must be at least a base long
-  to.map<-cbind("chr"   = data[,"match.chr"],
-                "start" = as.numeric(data[,"match.pos"])-1,
-                "end"   = as.numeric(data[,"match.pos"])
-                )
+  to.map<-data.frame("chr"   = data[,"match.chr"],
+                     "start" = as.numeric(data[,"match.pos"])-1,
+                     "end"   = as.numeric(data[,"match.pos"])
+                     )
 
   mapped.mm9 <- liftOver(to.map, chain.file="lib/mm8ToMm9.over.chain")
   
   #and stick the results back in the dataframe
-  data[,qw(match.chr, match.pos)] <- mapped.mm9[,qw(chr,start)]
-  data[,"match.pos"]<-data[,"match.pos"]+1
+  data[,"match.chr"] <- mapped.mm9[,"chr"]
+  data[,"match.pos"] <- 1+(mapped.mm9[,"start"] )
 
   return(data)
 }
@@ -40,20 +40,19 @@ colnms<- qw(machine, run.number, lane, tile, x.coord, y.coord, index.string, rea
 
 
 ## read in a chunk at a time, liftover and write to new file
+n <- 1
 repeat {
-  data <- t(as.data.frame(strsplit(readLines(in.file, n=1000, ok=T),"\t")))
-  data<-cbind(data, rep("", nrow(data)))
+  cat(n,"\n")
+  n <- n+1
+  data <- read.table(in.file, sep="\t", header=F, nrow=10000)
   colnames(data) <- colnms
   if (nrow(data) == 0) break
   new.data <- liftOver.sorted(data)
   write.table(new.data, file=newfile, append=T, quote=F, sep="\t", row.names=F, col.names=F)
+
   
 }
 
-close(con)
+close(in.file)
 
-
-#for testing
-#data<-read.table(filename, nrow=100, sep="\t")
-#colnames(data)<-colnms
 
