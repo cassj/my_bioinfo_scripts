@@ -18,8 +18,6 @@
 
 liftOver<-function(data, chain.file, ucsc.format=T, chr.col="chr", start.col="start",end.col="end"){
 
-  data<-to.map[20975:20980,]
-
   #data should be a matrix or dataframe with cols for chr, start and end
   #TODO: Or a RangedData / IRange object, 
  
