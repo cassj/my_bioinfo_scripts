@@ -44,13 +44,12 @@ n <- 1
 repeat {
   cat(n,"\n")
   n <- n+1
-  data <- read.table(in.file, sep="\t", header=F, nrow=10000)
+  data <- NULL
+  try({data <- read.table(in.file, sep="\t", header=F, nrow=10000)}, silent=T)
+  if(is.null(data)) { break }
   colnames(data) <- colnms
-  if (nrow(data) == 0) break
   new.data <- liftOver.sorted(data)
   write.table(new.data, file=newfile, append=T, quote=F, sep="\t", row.names=F, col.names=F)
-
-  
 }
 
 close(in.file)
