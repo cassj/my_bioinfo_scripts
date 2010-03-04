@@ -44,7 +44,7 @@ repeat {
   cat(n,"\n")
   n <- n+1
   data <- NULL
-  try({data <- read.table(in.file, sep="\t", header=F, nrow=10000, na.strings="", colClasses=colClasses)}, silent=T)
+  try({data <- read.table(in.file, sep="\t", header=F, nrow=10000, na.strings="")})
   if(is.null(data)) { break }
   colnames(data) <- colnms
   new.data <- liftOver.sorted(data)
