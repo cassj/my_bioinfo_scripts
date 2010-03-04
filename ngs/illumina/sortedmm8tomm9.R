@@ -38,18 +38,17 @@ colnms<- qw(machine, run.number, lane, tile, x.coord, y.coord, index.string, rea
             partner.offset, partner.strand)
 
 
-
 ## read in a chunk at a time, liftover and write to new file
 n <- 1
 repeat {
   cat(n,"\n")
   n <- n+1
   data <- NULL
-  try({data <- read.table(in.file, sep="\t", header=F, nrow=10000)}, silent=T)
+  try({data <- read.table(in.file, sep="\t", header=F, nrow=10000, na.strings="", colClasses=colClasses)}, silent=T)
   if(is.null(data)) { break }
   colnames(data) <- colnms
   new.data <- liftOver.sorted(data)
-  write.table(new.data, file=newfile, append=T, quote=F, sep="\t", row.names=F, col.names=F)
+  write.table(new.data, file=newfile, append=T, quote=F, sep="\t", row.names=F, col.names=F, na="")
 }
 
 close(in.file)
