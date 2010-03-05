@@ -1,7 +1,0 @@
-  GSM327023_chipFC1862_multi_hg17.txt  GSM327024_mockFC1592_uniq_hg17.txt   Johnson.pdf
-GSM327023_chip3034_multi_hg18.txt    GSM327023_chipFC1862_uniq_hg17.txt   GSM327024_mockFC1862_multi_hg17.txt  README
-GSM327023_chip3034_uniq_hg18.txt     GSM327023_chipFC2002_multi_hg17.txt  GSM327024_mockFC1862_uniq_hg17.txt   Supplemental.pdf
-GSM327023_chipFC1592_multi_hg17.txt  GSM327023_chipFC2002_uniq_hg17.txt   GSM327024_mockFC2002_multi_hg17.txt
-GSM327023_chipFC1592_uniq_hg17.txt   GSM327024_mockFC1592_multi_hg17.txt  GSM327024_mockFC2002_uniq_hg17.txt
-
-chip1<-read.csv("publication/GSM327023_chipFC1592_uniq_hg17.txt", sep=" ", header=F)
