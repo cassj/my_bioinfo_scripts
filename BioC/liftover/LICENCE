@@ -1,0 +1,10 @@
+The liftOver C code is from the UCSC Kent Source Tree.
+This code is copyrighted, but license is granted for 
+personal, academic and non-profit use. Commercial users should
+contact kent@soe.ucsc.edu
+
+All other code in the package is copyright Caroline Johnston 
+<cass.johnston@gmail.com> and is licensed under LGPL-3, a copy of 
+which is available in your R distribution directory at
+.../share/licenses/LGPL-3
+
