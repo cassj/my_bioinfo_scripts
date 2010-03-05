@@ -23,28 +23,29 @@ if (length(id)>0){
 
 #fetch nearest gene annot with ChIPpeakAnno
 library(biomaRt)
-ensmart <- useMart("ensembl", dataset="mmusculus_gene_ensembl")
+ensmart <- useMart("ensembl", dataset="hsapiens_gene_ensembl")
 
-data.annot <- annotatePeakInBatch(rd, AnnotationData=TSS.mouse.NCBIM37)
+TSS.human.GRCh37 <- getAnnotation(ensmart, featureType="TSS")
 
+data.annot <- annotatePeakInBatch(rd, AnnotationData=TSS.human.GRCh37)
 data.annot <- as.data.frame(data.annot)
 rownames(data.annot) <- as.character(data.annot$names)
 
 #and that only gives you the ensembl gene ID, so get extra info:
-                
 filters <- c("ensembl_gene_id")
 values<-unique(data.annot[,"feature"])
-attributes <- c("ensembl_gene_id","mgi_symbol", "description")
+attributes <- c("ensembl_gene_id","hgnc_symbol", "description")
 
 more.annot <- getBM(filters=filters, values=values, attributes=attributes, mart=ensmart)
 
 #ditch any that don't have a symbol
-more.annot <- more.annot[more.annot[,"mgi_symbol"]!="",]
+more.annot <- more.annot[more.annot[,"hgnc_symbol"]!="",]
 
 #and some have more than one symbol, but the same desc, so ditch them
 more.annot <- more.annot[-1*(which(duplicated(more.annot[,c(1,3)]))),]
 rownames(more.annot) <- more.annot[,"ensembl_gene_id"]
 more.annot <- more.annot[,which(colnames(more.annot)!="ensembl_gene_id")]
+
 
 #add this extra data to the data.annot
 ord <- as.character(data.annot[,"feature"])
@@ -78,6 +79,28 @@ rd.annot <- RangedData(ranges = IRanges(
 
 newfile<-sub("RangedData", "AnnoRangedData", filename)
 save(rd.annot, file=newfile)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

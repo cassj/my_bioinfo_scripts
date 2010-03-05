@@ -34,7 +34,7 @@ ky.annot<-cbind(ky, old.annot[as.character(ky\$IlluminaID),])
 remove<-which(is.na(limma.annot\$Chromosome))
 limma.annot<-limma.annot[-remove,]
 
-remove<-which(is.na(ky.annot\$Chromosome))
+remove<-which(is.na(ky.annot$Chromosome))
 ky.annot<-ky.annot[-remove,]
 
 #and liftOver the mm8 probe positions
@@ -55,13 +55,6 @@ limma.annot<-limma.annot[-remove,]
 remove<-which(is.na(ky.annot\$Chromosome))
 ky.annot<-ky.annot[-remove,]
 
-#we can't use anything mapped to a random chr, so
-ids<-grep('random', ky.annot\$Chromosome)
-ky.annot<-ky.annot[(-1*ids),]
-
-ids<-grep('random', limma.annot\$Chromosome)
-limma.annot<-limma.annot[(-1*ids),]
-
 
 
 #create a RangedData object for the region start and end:
@@ -78,6 +71,7 @@ rd.limma <- RangedData(ranges = IRanges(
                 	   end = limma.annot\$End,
 	                   names = as.character(limma.annot\$IlluminaSentrixTargetID),
                    ),
+                 names = as.character(limma.annot\$IlluminaSentrixTargetID),
                  space = as.character(limma.annot\$Chromosome),
                  values = limma.annot[,
                    qw(log2FoldChange, AveExpr,t,pVal, FDR, B, Search_key0, Target0, 
@@ -92,7 +86,6 @@ rd.limma <- RangedData(ranges = IRanges(
 rd.ky <- RangedData(ranges = IRanges(
                            start= ky.annot\$Start,
                            end = ky.annot\$End,
-	                   names = as.character(ky.annot\$IlluminaSentrixTargetID)
                    ),
                  space = as.character(ky.annot\$Chromosome),
                  values = ky.annot[,
@@ -103,6 +96,8 @@ rd.ky <- RangedData(ranges = IRanges(
                       Description, Comments
                       )]
                  )
+
+
 
 #And save the result
 save(rd.limma, file="[% cell_line %]/expression_data/RangedData_Limma.R")

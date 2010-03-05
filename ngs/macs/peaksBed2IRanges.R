@@ -25,6 +25,13 @@ if(ncol(data)==9){
 data[,"Name"]<-paste(paste(data[,"Chr"],data[,"Start"],sep=":"),data[,"End"], sep="-")
 
 
+#note - this fails if chr position is undefined, which can happen
+#if we've mapped over from somewhere else, so:
+ids <- which(is.na(data[,"Chr"]) | is.na(data[,"Start"]) | is.na(data[,"End"]) )
+if(length(ids)>0){
+  data <- data[-ids,]
+}
+
 rd <- RangedData(ranges = IRanges(
                    start= data$Start,
                    end = data$End,

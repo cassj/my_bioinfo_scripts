@@ -16,12 +16,12 @@
 
 #however, for now:
 
-liftOver<-function(data, chain.file, ucsc.format=F, chr.col="chr", start.col="start",end.col="end"){
+liftOver<-function(data, chain.file, ucsc.format=T, chr.col="chr", start.col="start",end.col="end"){
 
   #data should be a matrix or dataframe with cols for chr, start and end
   #TODO: Or a RangedData / IRange object, 
  
-  this<-data.frame(chr=as.character(data[,chr.col]),start=data[,start.col],end=data[,end.col], stringsAsFactors=F)
+  this<-data.frame(chr=as.character(data[,chr.col]),start=as.numeric(data[,start.col]),end=as.numeric(data[,end.col]), stringsAsFactors=F)
 
   #Normal counting specifies ranges in 1-based, fully closed form.
   #UCSC specifies ranges in  0-based, half open
@@ -46,6 +46,9 @@ liftOver<-function(data, chain.file, ucsc.format=F, chr.col="chr", start.col="st
   
   ##all this stuff should be a .C() call but I don't have time to make it work just now.
   in.bed <- tempfile()
+
+  #need to watch we don't get scientific notation printed out
+  options(scipen=10)
   write.table(this, file=in.bed, sep="\t", row.names=F, col.names=F, quote=F)
 
   out.bed <- tempfile()
