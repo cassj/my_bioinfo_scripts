@@ -12,7 +12,7 @@ liftOver.sorted <- function(data){
   #liftover and append to outfile
   #liftOver expects bed, which is chr start end and
   #intervals must be at least a base long
-  to.map<-data.frame("chr"   = data[,"match.chr"],
+  to.map<-data.frame("chr"   = as.character(data[,"match.chr"]),
                      "start" = as.numeric(data[,"match.pos"])-1,
                      "end"   = as.numeric(data[,"match.pos"])
                      )
@@ -20,7 +20,7 @@ liftOver.sorted <- function(data){
   mapped.mm9 <- liftOver(to.map, chain.file="lib/mm8ToMm9.over.chain")
   
   #and stick the results back in the dataframe
-  data[,"match.chr"] <- mapped.mm9[,"chr"]
+  data[,"match.chr"] <- as.character(mapped.mm9[,"chr"])
   data[,"match.pos"] <- 1+(mapped.mm9[,"start"] )
 
   return(data)
@@ -44,10 +44,14 @@ repeat {
   cat(n,"\n")
   n <- n+1
   data <- NULL
-  try({data <- read.table(in.file, sep="\t", header=F, nrow=10000, na.strings="")}, silent=T)
+  try({data <- read.table(in.file, skip=2000000, sep="\t", header=F, nrow=10000, na.strings="")}, silent=T)
   if(is.null(data)) { break }
   colnames(data) <- colnms
   new.data <- liftOver.sorted(data)
+
+  #ditch anything where we don't have a chr
+  ids <- which(is.na(new.data$match.chr))
+  if (length(ids)>0){new.data <- new.data[(-1*ids),];}
   write.table(new.data, file=newfile, append=T, quote=F, sep="\t", row.names=F, col.names=F, na="")
 }
 
