@@ -1,0 +1,37 @@
+\documentclass[a4paper]{article}
+
+\begin{document}
+
+\title{This is an example}
+\author{I Made This}
+\maketitle
+
+This is an example of using Sweave to do stuff.
+
+<<>>= code chunk. This is an unprocessed comment. By default, code and output will appear in the processed LaTeX file. 
+
+vals<-rnorm(x)
+length(vals)
+vals[1:10]
+
+
+@ and back to doc chunk. This is an unprocessed comment
+
+And here we can discuss the above code and resulting plot using \LaTeX{} markup
+
+@ we can use \Sexpt{} to do little bits of S calculations in text:
+
+We are using a sample size of \Sexpr{length(vals)} to generate the following plot:
+
+@ 
+
+
+<<fig=T, echo=F>>= opts say: "this is a figure", and "don't output the code"
+
+plot(density(vals))
+
+@
+
+And we have a density distribution plot in our output
+
+\end{document}
