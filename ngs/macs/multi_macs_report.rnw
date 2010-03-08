@@ -10,7 +10,7 @@ This is an example of using Sweave to do stuff.
 
 <<>>= code chunk. This is an unprocessed comment. By default, code and output will appear in the processed LaTeX file. 
 
-vals<-rnorm(x)
+vals<-rnorm(1000)
 length(vals)
 vals[1:10]
 
