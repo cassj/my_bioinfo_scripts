@@ -137,8 +137,6 @@ make.summary.table <- function(cut.off="all"){
 
 
 
-\textit{Warnings from Successful Runs:}\\
-
 <<echo=F>>= Make a note of any runs that had too few good peaks
 successful.runs <- names(rd)[which(!is.na(rd))]
 out.files <- file.path(macs.dir,successful.runs,'out.txt')
@@ -156,10 +154,10 @@ for(r in successful.runs){
     errors[[r]] <- res
   }
 }
-if (length(errors)>0){
- print(errors)
-}
 
+@ 
+\textit{Warnings from Successful Runs:}\\
+\Sexpr{errors}
 
 
 
