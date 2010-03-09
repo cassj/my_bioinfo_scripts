@@ -121,6 +121,27 @@ make.summary.table <- function(cut.off="all"){
 
 
 
+
+<<echo=F, results=tex>>= Generate a summary table for the runs
+  print(make.summary.table(0.000001))
+@ 
+
+
+
+
+<<echo=F, results=tex>>= Generate a summary table for the runs
+  print(make.summary.table(0.000000001))
+@ 
+
+
+
+
+
+
+
+
+
+
 <<echo=F>>= ** Function to calculate the overlap for a given cut.off **
 count.overlap <- function(cut.off="all", maxgap=0){
   caption <- 'Overlap'
@@ -223,6 +244,22 @@ count.overlap <- function(cut.off="all", maxgap=0){
 <<echo=F, results=tex>>= 
   print(count.overlap(1000))
 @ 
+
+
+
+
+
+<<echo=F, results=tex>>= 
+print(count.overlap(0.000001))
+@ 
+
+
+<<echo=F, results=tex>>= 
+  print(count.overlap(0.000000001))
+@ 
+
+
+
 
 
 
