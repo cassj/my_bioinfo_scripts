@@ -94,7 +94,6 @@ make.summary.table <- function(cut.off="all"){
 
 @
 
-\section{Results Summary, All Data}
 
 <<echo=F, results=tex>>= Generate a summary table for the runs
  options(scipen=50)
@@ -102,7 +101,6 @@ make.summary.table <- function(cut.off="all"){
 @ 
 
 
-\section{Results Summary, top 100,000 peaks}
 
 <<echo=F, results=tex>>= Generate a summary table for the runs
   print(make.summary.table(100000))
@@ -110,14 +108,12 @@ make.summary.table <- function(cut.off="all"){
 
 
 
-\section{Results Summary, top 10,000 peaks}
 
 <<echo=F, results=tex>>= Generate a summary table for the runs
   print(make.summary.table(10000))
 @ 
 
 
-\section{Results Summary, top 1,000 peaks}
 
 <<echo=F, results=tex>>= Generate a summary table for the runs
   print(make.summary.table(1000))
@@ -204,7 +200,6 @@ count.overlap <- function(cut.off="all", maxgap=0){
 
 
 
-\section{Percentage Overlapping, All Data}
 
 <<echo=F, results=tex>>= 
  options(scipen=50)
@@ -212,21 +207,18 @@ count.overlap <- function(cut.off="all", maxgap=0){
 @ 
 
 
-\section{Percentage Overlapping, top 100,000 peaks}
 
 <<echo=F, results=tex>>= 
   print(count.overlap(100000))
 @ 
 
 
-\section{Percentage Overlapping, top 10,000 peaks}
 
 <<echo=F, results=tex>>= 
   print(count.overlap(10000))
 @ 
 
 
-\section{Percentage Overlapping, top 1,000 peaks}
 
 <<echo=F, results=tex>>= 
   print(count.overlap(1000))
