@@ -153,6 +153,7 @@ for(r in successful.runs){
   if(length(res)>0){
     errors[[r]] <- res
   }
+  unlist(errors)
 }
 
 @ 
