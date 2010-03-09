@@ -95,6 +95,33 @@ make.summary.table <- function(cut.off="all"){
 @
 
 
+\textit{Warnings from Successful Runs:}\\
+
+<<echo=F, results=tex>>= Make a note of any runs that had too few good peaks
+successful.runs <- names(rd)[which(!is.na(rd))]
+out.files <- file.path(macs.dir,successful.runs,'out.txt')
+cmds<-paste("grep 'WARNING'",out.files)
+names(cmds) <- successful.runs
+errors <- list()
+
+for(r in successful.runs){
+  res<- system(cmds[r], inter=T)
+  ignore <- grep("random",res)
+  if(length(ignore)>0){
+    res <- res[(-1*ignore)]
+  }
+  if(length(res)>0){
+    errors[[r]] <- res
+  }
+}
+
+errors<-data.frame(unlist(errors))
+xtable(errors,align='lp{12cm}')
+@
+
+
+
+
 <<echo=F, results=tex>>= Generate a summary table for the runs
  options(scipen=50)
  print(make.summary.table())
@@ -132,33 +159,6 @@ make.summary.table <- function(cut.off="all"){
 <<echo=F, results=tex>>= Generate a summary table for the runs
   print(make.summary.table(0.000000001))
 @ 
-
-
-
-
-
-<<echo=F>>= Make a note of any runs that had too few good peaks
-successful.runs <- names(rd)[which(!is.na(rd))]
-out.files <- file.path(macs.dir,successful.runs,'out.txt')
-cmds<-paste("grep 'WARNING'",out.files)
-names(cmds) <- successful.runs
-errors <- list()
-
-for(r in successful.runs){
-  res<- system(cmds[r], inter=T)
-  ignore <- grep("random",res)
-  if(length(ignore)>0){
-    res <- res[(-1*ignore)]
-  }
-  if(length(res)>0){
-    errors[[r]] <- res
-  }
-  unlist(errors)
-}
-
-@ 
-\textit{Warnings from Successful Runs:}\\
-\Sexpr{errors}
 
 
 
