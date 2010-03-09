@@ -54,12 +54,16 @@ make.summary.table <- function(cut.off="all"){
   npeaks <- min.peak.length <- ave.peak.length <- max.peak.length <- numeric(length(runs))
   data <- data.frame(npeaks, min.peak.length, ave.peak.length, max.peak.length)
   rownames(data) <- runs
+  
   if(is.numeric(cut.off)){
     if(cut.off<1){
       caption <- paste(caption, 'pvalue cut off', cut.off)
     }else
     caption <- paste(caption, 'Top', cut.off,'Peaks')
+  }else{
+    caption <- paste(caption, 'All Data')
   }
+  
   for (r in runs){
     if(class(rd[[r]])!="RangedData"){
       data[r,] <- rep('NA', 4)
@@ -69,9 +73,10 @@ make.summary.table <- function(cut.off="all"){
         if(cut.off<1){
           this <- this[which(this$pval<cut.off),]
         }else{
+          cut.off <- min(cut.off, nrow(this))
           this <- this[1:cut.off,]
         }
-      }else{caption <- paste(caption, 'All Data')}
+      }
       if(nrow(this)<1){
         data[r,] <- rep('NA', 4)
       }else{
@@ -92,7 +97,8 @@ make.summary.table <- function(cut.off="all"){
 \section{Results Summary, All Data}
 
 <<echo=F, results=tex>>= Generate a summary table for the runs
-  print(make.summary.table())
+ options(scipen=50)
+ print(make.summary.table())
 @ 
 
 
@@ -116,6 +122,134 @@ make.summary.table <- function(cut.off="all"){
 <<echo=F, results=tex>>= Generate a summary table for the runs
   print(make.summary.table(1000))
 @ 
+
+
+
+<<echo=F>>= ** Function to calculate the overlap for a given cut.off **
+count.overlap <- function(cut.off="all", maxgap=0){
+  caption <- 'Overlap'
+  successful.runs <- names(rd)[which(!is.na(rd))]
+  data <- matrix(nrow=length(successful.runs), ncol=length(successful.runs))
+  rownames(data) <- colnames(data) <- successful.runs
+
+  if(is.numeric(cut.off)){
+    if(cut.off<1){
+      caption <- paste(caption, 'pvalue cut off', cut.off)
+    }else
+    caption <- paste(caption, 'Top', cut.off,'Peaks')
+  }else{
+    caption <- paste(caption, 'All Data')
+  }
+  
+  
+  for (r1 in successful.runs){
+    for (r2 in successful.runs){
+
+      #to do cut-offs, it's actually easier to use the data frame
+      #and then build a new RangedData for the overlap
+      this.r1 <- df[[r1]]
+      this.r2 <- df[[r2]]
+      
+      if(is.numeric(cut.off)){
+        if(cut.off<1){
+          this.r1 <- this.r1[which(this.r1$pval<cut.off),]
+          this.r2 <- this.r2[which(this.r2$pval<cut.off),]
+        }else{
+          cut.off <- min(cut.off, nrow(this.r1), nrow(this.r2))
+          this.r1 <- this.r1[1:cut.off,]
+          this.r2 <- this.r2[1:cut.off,]
+          }
+      }
+      
+      if( (nrow(this.r1)<1) | (nrow(this.r2)<1) ) {
+        data[r1,r2] <- 0
+      }else{
+        values <- grep('values.', colnames(this.r1), value=T)
+        values <- gsub('values.', '',values)
+        colnames(this.r1) <- gsub('values.', '', colnames(this.r1))
+        colnames(this.r2) <- gsub('values.', '', colnames(this.r2))
+        query.len <- nrow(this.r1)
+        subject.len <- nrow(this.r2)
+        
+        rd.1 <- RangedData(ranges = IRanges(
+                             start = this.r1$start,
+                             end   = this.r1$end,
+                             names = this.r1$name,
+                             ),
+                           space = this.r1$space,
+                           values = this.r1[,values]
+                           )
+     
+        rd.2 <- RangedData(ranges = IRanges(
+                             start = this.r2$start,
+                             end   = this.r2$end,
+                             names = this.r2$name,
+                             ),
+                           space  = this.r2$space,
+                           values = this.r2[,values]
+                           )
+        overlap <- findOverlaps(rd.1, rd.2, multiple=F, maxgap=maxgap)
+        overlap.totals <- unlist(lapply(overlap, function(x){return(length(x[!is.na(x)]))}))
+        perc.overlapping <- 100*(sum(overlap.totals)/query.len)
+        data[r1,r2] <- perc.overlapping
+      }
+    }
+  }
+  
+  tab <- xtable(data, caption=caption)
+  return(tab)
+}
+
+@ 
+
+
+
+\section{Percentage Overlapping, All Data}
+
+<<echo=F, results=tex>>= 
+ options(scipen=50)
+ print(count.overlap())
+@ 
+
+
+\section{Percentage Overlapping, top 100,000 peaks}
+
+<<echo=F, results=tex>>= 
+  print(count.overlap(100000))
+@ 
+
+
+\section{Percentage Overlapping, top 10,000 peaks}
+
+<<echo=F, results=tex>>= 
+  print(count.overlap(10000))
+@ 
+
+
+\section{Percentage Overlapping, top 1,000 peaks}
+
+<<echo=F, results=tex>>= 
+  print(count.overlap(1000))
+@ 
+
+
+
+
+
+%<<echo=F, fig=T>>= ** Plot scores for overlapping regions **
+%successful.runs <- names(rd)[which(!is.na(rd))]
+%opar <- par( mfrow(length(successful.runs), length(successful.runs)) )
+%for(r1 in successful.runs){
+%  for(r2 in successful.runs){
+%    r1.data <- df[[r1]]
+%    r2.data <- df[[r2]]
+%
+%  }
+%}
+%
+%par(opar)
+%@ 
+
 
 
 \end{document}
