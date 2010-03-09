@@ -2,36 +2,98 @@
 
 \begin{document}
 
-\title{This is an example}
-\author{I Made This}
+\title{Multi Macs Report}
+
 \maketitle
 
-This is an example of using Sweave to do stuff.
 
-<<>>= code chunk. This is an unprocessed comment. By default, code and output will appear in the processed LaTeX file. 
+<<echo=F>>= 
+library(IRanges)
+library(xtable)
+@ 
 
-vals<-rnorm(1000)
-length(vals)
-vals[1:10]
+<<echo=F>>= 
+macs.dir <- grep('Macs', list.files(), value=T)
+@
+Found Macs directory: \Sexp{macs.dir}
+
+<<echo=F>>= Make a table of the cmds for each run
+
+readme <- file.path(macs.dir, 'README')
+readme <- read.table(readme, sep="\t")
+colnames(readme) <- c('run','cmd')
+readme[,'run'] <- gsub('./','', readme[,"run"])
+runs <- grep('^run', list.files(macs.dir), value=T)
+@
+
+\begin{table}[!h] 
+  \centering
+  \caption{Macs Runs}
+  \label{tab:macs_runs}
+  
+<<mytable,echo=F,results=tex>>=
+tab <- xtable(readme)
+print(tab, 
+      include.rownames=F,
+      sanitize.text.function = function(x){x},
+      floating=FALSE, 
+      hline.after=NULL, 
+      add.to.row=list(pos=list(-1,0, nrow(tab)), 
+        command=c(
+          '\\toprule',
+          '\\midrule',
+          '\\bottomrule')))
+@ 
+\end{table}
 
 
-@ and back to doc chunk. This is an unprocessed comment
+<<echo=F>>= load your RangedData objects from the runs
+rd <- list()
+for (r in runs){
+  file <- file.path(macs.dir,r,"NA_peaks.AnnoRangedData.R")
+  if(file.exists(file)){
+    rd[[r]] <- get(load(file))
+  }else rd[[r]] <- NA
+}
+@ 
 
-And here we can discuss the above code and resulting plot using \LaTeX{} markup
+<<echo=F>>= Generate a summary table for the runs
 
-@ we can use \Sexpt{} to do little bits of S calculations in text:
-
-We are using a sample size of \Sexpr{length(vals)} to generate the following plot:
+npeaks <- min.peak.length <- ave.peak.length <- max.peak.length <- numeric(length(runs))
+data <- data.frame(npeaks, min.peak.length, ave.peak.length, max.peak.length)
+rownames(data) <- runs
+for (r in runs){
+ if(is.na(rd[[r]])){
+   data[r,] <- rep(NA, 4)
+ }else{
+   this <- as.data.frame(rd[[r]])
+   data[r,'npeaks'] <- nrow(this)
+   data[r,'min.peak.length'] <- min(this[,'values.Length'])
+   data[r,'ave.peak.length'] <- mean(this[,'values.Length'])
+   data[r,'max.peak.length'] <- max(this[,'values.Length'])
+ }
+}
 
 @ 
 
+\begin{table}[!h] 
+  \centering
+  \caption{Macs Results}
+  \label{tab:macs_res_summary}
+  
+<<mytable,echo=F,results=tex>>=
+tab <- xtable(data, digits=rep(0,ncol(data)+1))
+print(tab, 
+      sanitize.text.function = function(x){x},
+      floating=FALSE, 
+      hline.after=NULL, 
+      add.to.row=list(pos=list(-1,0, nrow(tab)), 
+        command=c(
+          '\\toprule',
+          '\\midrule',
+          '\\bottomrule')))
+@ 
+\end{table}
 
-<<fig=T, echo=F>>= opts say: "this is a figure", and "don't output the code"
-
-plot(density(vals))
-
-@
-
-And we have a density distribution plot in our output
 
 \end{document}
