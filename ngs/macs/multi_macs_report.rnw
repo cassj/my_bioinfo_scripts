@@ -1,99 +1,120 @@
-\documentclass[a4paper]{article}
-
 \begin{document}
 
 \title{Multi Macs Report}
+\author{Cass Johnston}
 
 \maketitle
 
 
-<<echo=F>>= 
+<<echo=F>>=
 library(IRanges)
 library(xtable)
-@ 
+@
 
-<<echo=F>>= 
+<<echo=F>>=
 macs.dir <- grep('Macs', list.files(), value=T)
 @
-Found Macs directory: \Sexp{macs.dir}
+Found Macs directory: \Sexpr{print(macs.dir)}
 
-<<echo=F>>= Make a table of the cmds for each run
+<<echo=F, results=tex>>= Make a table of the cmds for each run
 
 readme <- file.path(macs.dir, 'README')
 readme <- read.table(readme, sep="\t")
 colnames(readme) <- c('run','cmd')
-readme[,'run'] <- gsub('./','', readme[,"run"])
-runs <- grep('^run', list.files(macs.dir), value=T)
+readme[,'run'] <- gsub('./run','', readme[,"run"])
+runs <- grep('run', list.files(macs.dir), value=T)
+tab <- xtable(readme, align='llp{12cm}', caption='Macs Runs')
+print(tab, include.rownames=F, size='footnotesize')
 @
 
-\begin{table}[!h] 
-  \centering
-  \caption{Macs Runs}
-  \label{tab:macs_runs}
-  
-<<mytable,echo=F,results=tex>>=
-tab <- xtable(readme)
-print(tab, 
-      include.rownames=F,
-      sanitize.text.function = function(x){x},
-      floating=FALSE, 
-      hline.after=NULL, 
-      add.to.row=list(pos=list(-1,0, nrow(tab)), 
-        command=c(
-          '\\toprule',
-          '\\midrule',
-          '\\bottomrule')))
-@ 
-\end{table}
 
 
-<<echo=F>>= load your RangedData objects from the runs
+<<echo=F>>= load your RangedData objects from the runs and make sorted data frames
 rd <- list()
+df <- list()
 for (r in runs){
   file <- file.path(macs.dir,r,"NA_peaks.AnnoRangedData.R")
   if(file.exists(file)){
     rd[[r]] <- get(load(file))
-  }else rd[[r]] <- NA
-}
-@ 
+    this.df <- as.data.frame(rd[[r]])
+    this.df$pval <- 10^(this.df$values.neg10log10pVal / -10 )
+    df[[r]] <- this.df[order(this.df$pval),]
+  }else {
+    rd[[r]] <- NA
+    df[[r]] <- NA
+  }
+} 
+@
 
-<<echo=F>>= Generate a summary table for the runs
+<<echo=F>>= Define a function to print out the summary table at different significance cut-offs
 
-npeaks <- min.peak.length <- ave.peak.length <- max.peak.length <- numeric(length(runs))
-data <- data.frame(npeaks, min.peak.length, ave.peak.length, max.peak.length)
-rownames(data) <- runs
-for (r in runs){
- if(is.na(rd[[r]])){
-   data[r,] <- rep(NA, 4)
- }else{
-   this <- as.data.frame(rd[[r]])
-   data[r,'npeaks'] <- nrow(this)
-   data[r,'min.peak.length'] <- min(this[,'values.Length'])
-   data[r,'ave.peak.length'] <- mean(this[,'values.Length'])
-   data[r,'max.peak.length'] <- max(this[,'values.Length'])
- }
-}
-
-@ 
-
-\begin{table}[!h] 
-  \centering
-  \caption{Macs Results}
-  \label{tab:macs_res_summary}
+make.summary.table <- function(cut.off="all"){
+  caption <- 'Macs Results Summary'
+  npeaks <- min.peak.length <- ave.peak.length <- max.peak.length <- numeric(length(runs))
+  data <- data.frame(npeaks, min.peak.length, ave.peak.length, max.peak.length)
+  rownames(data) <- runs
+  if(is.numeric(cut.off)){
+    if(cut.off<1){
+      caption <- paste(caption, 'pvalue cut off', cut.off)
+    }else
+    caption <- paste(caption, 'Top', cut.off,'Peaks')
+  }
+  for (r in runs){
+    if(class(rd[[r]])!="RangedData"){
+      data[r,] <- rep('NA', 4)
+    }else{
+      this <- df[[r]]
+      if(is.numeric(cut.off)){
+        if(cut.off<1){
+          this <- this[which(this$pval<cut.off),]
+        }else{
+          this <- this[1:cut.off,]
+        }
+      }else{caption <- paste(caption, 'All Data')}
+      if(nrow(this)<1){
+        data[r,] <- rep('NA', 4)
+      }else{
+        data[r,'npeaks'] <- nrow(this)
+        data[r,'min.peak.length'] <- min(this[,'values.Length'])
+        data[r,'ave.peak.length'] <- round(mean(this[,'values.Length']), digits=2)
+        data[r,'max.peak.length'] <- max(this[,'values.Length'])
+      }
+    }
+  }
   
-<<mytable,echo=F,results=tex>>=
-tab <- xtable(data, digits=rep(0,ncol(data)+1))
-print(tab, 
-      sanitize.text.function = function(x){x},
-      floating=FALSE, 
-      hline.after=NULL, 
-      add.to.row=list(pos=list(-1,0, nrow(tab)), 
-        command=c(
-          '\\toprule',
-          '\\midrule',
-          '\\bottomrule')))
+  tab <- xtable(data, caption=caption)
+  return(tab)
+}
+
+@
+
+\section{Results Summary, All Data}
+
+<<echo=F, results=tex>>= Generate a summary table for the runs
+  print(make.summary.table())
 @ 
-\end{table}
+
+
+\section{Results Summary, top 100,000 peaks}
+
+<<echo=F, results=tex>>= Generate a summary table for the runs
+  print(make.summary.table(100000))
+@ 
+
+
+
+\section{Results Summary, top 10,000 peaks}
+
+<<echo=F, results=tex>>= Generate a summary table for the runs
+  print(make.summary.table(10000))
+@ 
+
+
+\section{Results Summary, top 1,000 peaks}
+
+<<echo=F, results=tex>>= Generate a summary table for the runs
+  print(make.summary.table(1000))
+@ 
 
 
 \end{document}
