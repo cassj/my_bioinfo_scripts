@@ -116,7 +116,9 @@ for(r in successful.runs){
 }
 
 errors<-data.frame(unlist(errors))
-xtable(errors,align='lp{12cm}')
+if(nrow(errors)>0){
+  xtable(errors,align='lp{12cm}')
+}
 @
 
 
