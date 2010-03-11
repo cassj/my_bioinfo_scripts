@@ -235,16 +235,16 @@ my $exon_bound = 1;
 #single exon?
 if ($e_n == 1){
   print "Only one exon, so we'll just use that sequence. You will be unable to detect genomic contamination with this primer pair\n";
-  @target_exon_ids = scalar (keys %exons);
+  @target_exon_ids = keys %exons;
   $exon_bound = 0;
 } 
 
 ##just 2?
-#if ($e_n == 2){
-#  print "Only two exons, so we'll aim for that exon-exon boundary";
-#  #need to make sure these are the right way round.
-#   @target_exon_ids = keys %exons;
-#}
+if ($e_n == 2){
+  print "Only two exons, so we'll aim for that exon-exon boundary";
+  #need to make sure these are the right way round.
+   @target_exon_ids = keys %exons;
+}
 
 #more than 2:
 if ($e_n >= 2){
