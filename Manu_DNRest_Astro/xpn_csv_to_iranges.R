@@ -13,19 +13,36 @@ colnames(limma)[1]<-"IlluminaID"
 #data is sentrix mouse ref 6 according to the paper
 #this has old targetIds, that are no longer in use. So, get the probe seqs
 #from old reMoat data
+#http://www.compbio.group.cam.ac.uk/Resources/Annotation/IlluminaMouseV1.1.txt
+#Mouse WG version 1.1 (Mouse-6_v1_1_11234304_A) against Mouse Feb. 2006 (mm8) assembly 
 old.annot<-read.csv("lib/IlluminaMouseV1.txt", sep="\t", header=T)
 
-#a few are duplicated
-#old.annot[duplicated(as.character(old.annot[,2])),"Symbols"]
-# [1] Txn1 Slc25a33            Txn1 Slc25a33            Eef1a1                  
-# [4] Eef1a1                   Eef1a1                   LOC380687 BC096042 Gapdh
-# [7] LOC380687 BC096042 Gapdh LOC380687 BC096042 Gapdh Ubc                     
-#[10] Ubc                      Ubc                      AK013903 Rps9           
-#[13] AK013903 Rps9            AK013903 Rps9            Tubb2b                  
-#[16] Actb                     Actb              
+#Our IlluminaIDs correspond to col "Target0" in the annot. Which, means they aren't actually
+#Probe IDs, they're transcript IDs. So we should go with the genome position of the transcript.
+#The results have been (I assume) averaged over all probes that hit that gene - which is stupid,
+#but we don't have access to the raw data so there's nothing we can do about it.
+#
 
-#but very few, so let's just remove the dups and go with the probe locations:
-old.annot<-old.annot[!duplicated(old.annot[,2]),]
+#surely illumina *must* have annotation for this, even if it's shite.
+# wget http://www.switchtoi.com/pdf/Annotation%20Files/Mouse/Mouse-6_V1.csv.zip
+
+illumina.annot<-read.csv("lib/Mouse-6_V1.csv")
+
+#hmm, doesn't get me any genome positions though, just Accession numbers. Try them in biomaRt
+
+
+library(biomaRt)
+ensmart <- useMart('ensembl', dataset='mmusculus_gene_ensembl')
+filters <- 'illumina_mousewg_6_v1'
+filters <- 'embl'
+values <- as.character(illumina.annot[1:10,"Accession"])
+attributes <- qw(embl, ensembl_gene_id, ensembl_transcript_id, start_position, end_position, strand, mgi_symbol)
+
+res <- getBM(filters=filters, values=values, attributes=attributes, mart=ensmart)
+
+
+
+
 rownames(old.annot)<-old.annot[,2]
 limma.annot<-cbind(limma, old.annot[as.character(limma$IlluminaID),])
 ky.annot<-cbind(ky, old.annot[as.character(ky$IlluminaID),])
