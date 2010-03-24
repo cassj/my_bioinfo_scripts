@@ -1,0 +1,8 @@
+This R module requires that you have Jim Kent's UCSC Source Tree installed. 
+See: http://hgwdev.cse.ucsc.edu/~kent/src/
+
+Please bear in mind that commercial users of the Kent Source Tree must have permission
+from kent@soe.ucsc.edu
+
+The binary files generated from building the Kent Src are assumed to be in your path. 
+

@@ -1,0 +1,12 @@
+Package: liftoveR
+Version: 0.1-0
+Date: 2010-03-23
+Title: liftoveR
+Author: Cass Johnston <cassjohnston@gmail.com>, using Jim Kent's liftOver code.
+Maintainer: Cass Johnston <cassjohnston@gmail.com>
+Depends: R (>= 1.8.0)
+SystemRequirements: UCSC Kent Source
+Suggests: IRanges
+Description: Integrated Jim Kent's liftOver tool, for converting genome positons between genome versions, into R.
+License: LGPL-3 +file LICENCE
+URL: http://www.r-project.org, http://www.bioconductor.org, http://hgwdev.cse.ucsc.edu/~kent/src/
