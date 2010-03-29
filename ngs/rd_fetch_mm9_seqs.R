@@ -22,6 +22,9 @@ data <- data[order(data$values.neg10log10pVal, decreasing=T),]
 data<-data[1:n,]
 #and remake into RD
 
+#Fix any incorrectly named chromosomes:
+data$space <- as.character(data$space)
+data$space <- gsub('MT', 'M', data$space)
 
 values <- grep('values', colnames(data), value=T)
 values <- gsub('values.', '', values)
@@ -30,17 +33,17 @@ colnames(data) <-  gsub('values.', '', colnames(data))
 data.top <- RangedData(ranges = IRanges(
                    start= data$start,
                    end = data$end,
-                   names = data$names,
+                   names = as.character(data$names),
                    ),
-                 space = data$space,
+                 space = as.character(data$space),
                  values = data[,values]
                  )
 
 #fetch the peak sequence.
 peaksWithSequences = as.data.frame(getAllPeakSequence(data.top, upstream=0, downstream=0, genome=Mmusculus))
 
-rownames(peaksWithSequences) <- peaksWithSequences$names
-rownames(data) <- data$names
+rownames(peaksWithSequences) <- as.character(peaksWithSequences$names)
+rownames(data) <- as.character(data$names)
 
 #stick the sequences onto your data.frame
 peaksWithSequences <- peaksWithSequences[rownames(data),]
@@ -51,9 +54,9 @@ values <- c(values,'sequence')
 data <- RangedData(ranges = IRanges(
                      start= data$start,
                      end = data$end,
-                     names = data$names,
+                     names = as.character(data$names),
                      ),
-                   space = data$space,
+                   space = as.character(data$space),
                    values = data[,values]
                    )
 
