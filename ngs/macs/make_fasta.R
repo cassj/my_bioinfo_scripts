@@ -9,7 +9,7 @@ eval(parse(text=args[grep('end', args)]))
 data <- read.csv(filename, as.is=T)
 
 #delete any existing version
-unlink(newfile)
+unlink(outfile)
 
 for (i in start:end){
   write(paste('>', data$names[i], "\n", data$sequence[i], sep=""),append=T, file=outfile)
