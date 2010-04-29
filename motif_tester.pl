@@ -126,32 +126,19 @@ $REGISTRY->load_registry_from_db(
                                 );
 
 
-#get this gene, we need to show the transcripts and exons and such.
-my $gene_ad = $REGISTRY->get_adaptor(
-                                     $species,
-                                     'core', 
-                                     'Gene',
-                                    );
-my $gene = $gene_ad->fetch_by_stable_id($identifier);
-my $strand = $gene->strand;
-print $report_fh "Gene is on strand $strand\n";
-print $report_fh "Chr".$gene->slice->seq_region_name;
-print $report_fh ':'.$gene->start."-".$gene->end."\n";
-
-my @exons = @{$gene->get_all_Exons};
-my %exons;
-for (my $i=0; $i<=$#exons; $i++){
-  $exons{$exons[$i]->display_id} = $i;
-}
-
-my @transcripts = @{$gene->get_all_Transcripts};
-my $ntrans = scalar(@transcripts);
-print $report_fh "Gene has $ntrans transcripts:\n";
-foreach (@transcripts){
-   print $report_fh $_->display_id;
-   print $report_fh "\tChr".$gene->slice->seq_region_name.':'.$_->start.'-'.$_->end."\n";
-
-}
+print $report_fh "Report for gene $identifier\n\n";
+print $report_fh "Parameters:\n";
+print $report_fh "\tSpecies\t$species\n";
+print $report_fh "\tfive_up\t$five_up\n";
+print $report_fh "\tfive_down\t$five_down\n";
+print $report_fh "\tthree_up\t$three_up\n";
+print $report_fh "\tthree_down\t$three_down\n";
+print $report_fh "\tmsa\t$msa\n";
+print $report_fh "\tlimit species\t@limit_species\n";
+print $report_fh "\tdatabase_dir\t$database_dir\n";
+print $report_fh "\tmatrix_IDs\t@matrix_IDs\n";
+print $report_fh "\tthreshold\t$threshold\n";
+print $report_fh "\n\n";
 
 
 #identify the orthologs of this gene.
@@ -168,13 +155,13 @@ print "Got Homology\n" if $verbose;
 # create a data structure of orthologs like:
 # { ENSID => [$gene, $slice, $seq], 
 #   ENSID => [$gene, $slice, $seq]...}
-my $data = {$identifier => fetch_data($species, $identifier)};
+my $data = {$identifier => fetch_data($species, $identifier, $five_up, $five_down, $three_up, $three_down, $report_fh)};
 
 #print the sequence out for reference
 my $outfa = Bio::SeqIO->new(-file => ">$identifier.fa" , '-format' => 'fasta');
 $outfa->write_seq($data->{$identifier}->[2]);
 
-print $report_fh "Orthologs:\n";
+print $report_fh "\n\nOrthologs:\n\n";
 foreach my $homology (@$homologies) {
 
   #we're only interested in the 1-to-1 orthologs 
@@ -198,17 +185,13 @@ foreach my $homology (@$homologies) {
      next unless $limit_species{$taxon->binomial}; 
      warn $taxon->binomial if $verbose;
     }
-    print $report_fh "\t".$member->stable_id;
-    print $report_fh "\t(".$taxon->binomial.")\n";
+    
+    my $pad_five_up = $five_up ? $five_up + 250 : 0;
+    my $pad_five_down = $five_down ? $five_down + 250 : 0;
+    my $pad_three_up = $three_up ? $three_up + 250 : 0;
+    my $pad_three_down = $five_down ? $five_down + 250 : 0;
 
-
-#    #filter on classification? Not working right now.
-#    my $classification_string = $taxon->classification;
-#    my %classification = map {$_ => 1} split /\s+/, $classification_string;
-#    warn Dumper \%classification;
-#    next if ($classification && !$classification{$classification});
-
-    $data->{$member->stable_id} = fetch_data($taxon->name, $member->stable_id);
+    $data->{$member->stable_id} = fetch_data($taxon->name, $member->stable_id, $pad_five_up, $pad_five_down, $pad_three_up, $pad_three_down, $report_fh);
   }
 
 }
@@ -220,17 +203,6 @@ my @seqs = map {$data->{$_}->[2]} keys %$data;
 # I *think* the default params look okay.
 my $factory = "Bio::Tools::Run::Alignment::$msa"->new();
 my $aln = $factory->align(\@seqs);
-
-#add the start positions of each of the genes (relative to the seq, not the align
-#as annotation (prob a better way of doing this)
-#my $ac = $aln->annotation || Bio::Annotation::Collection->new();
-#foreach (keys %$data){
-#    my ($genestart) = $data->{$identifier}->[2]->get_SeqFeatures();
-#    $genestart = $genestart->start;
-#    $ac->add_Annotation($identifier,  Bio::Annotation::SimpleValue->new( -value => $genestart));    
-#    
-#}
-#$aln->annotation($ac);
 
 
 #print the aln out for reference
@@ -279,25 +251,48 @@ my $full_length = Bio::SeqFeature::Generic->new(
                                                 -end   => $seq->length,
                                                );
 
-my ($genestart) = $data->{$identifier}->[2]->get_SeqFeatures();
 
+my ($genestart, $tss) = $data->{$identifier}->[2]->get_SeqFeatures();
+
+
+#bottom strand? Draw length track first and gene underneath
+if($data->{$identifier}->[0]->strand != 1){
+    $panel->add_track($full_length,
+		      -glyph   => 'arrow',
+		      -tick    => 2,
+		      -fgcolor => 'black',
+		      -west    => 1,
+		      );
+}
 
 $panel->add_track($genestart,
 		  -glyph   => 'diamond',
 		  -fgcolor => 'green',
+		  -bgcolor => 'green',
 		  -label => 1,
 		 );
 
-$panel->add_track($full_length,
-                  -glyph   => 'arrow',
-                  -tick    => 2,
-                  -fgcolor => 'black',
-                  -double  => 1,
-                 );
+$panel->add_track($tss,
+		  -glyph   => 'diamond',
+		  -fgcolor => 'red',
+		  -bgcolor => 'red',
+		  -label => 1,
+		  -display_name => "TSSs",
+		 );
+
+#top strand? Draw gene first then length track
+if($data->{$identifier}->[0]->strand == 1){
+    $panel->add_track($full_length,
+		      -glyph   => 'arrow',
+		      -tick    => 2,
+		      -fgcolor => 'black',
+		      -east    => 1,
+		      );
+}
 
 #figure out the transcript start sites relative to the gene start site?
 
-#Calculate the IC for each col of the alignment 
+#Calculate the conservation for each col of the alignment 
 my $nseqs = $aln->no_sequences;
 my @aln_seqs = map { [ split '', $aln->get_seq_by_pos($_)->seq ]} 1..$nseqs;
 
@@ -315,11 +310,13 @@ my $consfeature =  Bio::SeqFeature::Generic->new(-start        => 1,
 #ie just ignore gaps for now.
 my @cols = map {$aln->column_from_residue_number($identifier, $_) } 1..$seq->length;
 my $consft = Bio::SeqFeature::Generic->new(
-                                            -start     => 1,
-                                            -end       => $seq->length,
+					   -start        => 1,
+					   -end          => $seq->length,
+					   -display_name => 'Conservation',
                                            );
 
 my $seqpos = 1;
+my @cons;
 foreach my $alnpos (@cols){
 
     my @col =  map {$aln_seqs[$_-1][$alnpos-1] } 1..$aln->no_sequences;
@@ -332,30 +329,21 @@ foreach my $alnpos (@cols){
     #best % conservation. 
 	
     my @p = map {$_ / $nseqs} @count;
+    push @cons, max(@p);
 
     $consft->add_SeqFeature(Bio::SeqFeature::Generic->new(
-                                                -start => $seqpos,
-                                                -end   => $seqpos,
-                                                -score => max (@p),
+							  -start => $seqpos,
+							  -end   => $seqpos,
+							  -score => max (@p),
                                                ));
 
      $seqpos++;
-    #push @cons, max (@p);
 } 
 
 my @constrack = $panel->add_track($consft,
-                       -glyph        => 'xyplot',
-                       -graph_type   => 'linepoints',
-                       -max_score    => 1,
-                       -min_score    => 0,
-  );
-
-
-#aagh, why doesn't this work?
-#my $constrack =  $panel->add_track(-wigfile => \@cons,
-#				   -glyph => 'wiggle_xyplot',
-#);
-
+				  -label => 1,
+				  -glyph        => 'heat_map',
+				  );
 
 #for each matrix, search against this string.
 my %seen;
@@ -366,7 +354,7 @@ while(my $pwm = $it->next){
   my $id = $pwm->ID;
   $seen{$id} ? die "Duplicate matrix IDs not allowed" : $seen{$id}++;
 
-  print $report_fh "Searching for matrix $id (".$pwm->name.")\n";  
+  print $report_fh "\n\nSearching for matrix $id (".$pwm->name.")\n\n";  
   my $class = $pwm->class;
   $class =~s/\t/ /g;   #tabs in class confuse pwmsearch
   $pwm->class($class);
@@ -381,41 +369,77 @@ while(my $pwm = $it->next){
   
   #get an iterator over the hits
   my $it = $siteset->Iterator;
+
   #a feature to store my TFBS features
-  my $ft = Bio::SeqFeature::Generic->new(-start        => 1, 
-					 -end          => $seq->length, 
-					 -display_name => $pwm->name || $id,
+  my $fw_name = my $rev_name =  $pwm->name || $id;
+  $fw_name .=" forward";
+  $rev_name .=" reverse";
+  my $ft_fw = Bio::SeqFeature::Generic->new(-start        => 1, 
+					    -end          => $seq->length, 
+					    -display_name => $fw_name,
+					    -label        => 1,
 					);
+  
+  my $ft_rev = Bio::SeqFeature::Generic->new(-start        => 1, 
+					    -end          => $seq->length, 
+					    -display_name => $rev_name,
+					    -label        => 1,
+					);
+ 
   my @scores;
   #and the hits as subfeatures
   while( my $site = $it->next){
-    $ft->add_SeqFeature($site);
-    push @scores, $site->score ;
-    #start relative to sequence start
-    my $site_start = $site->start;
-    #site relative to gene start?
-    
- 
-    print $report_fh  "\tHit: Score=".$site->rel_score."  Starting at position $site_start\n";
-  }
+      my $site_ft = Bio::SeqFeature::Generic->new(
+						  -start          => $site->start,
+						  -end            => $site->end,
+						  -strand         => $site->strand,
+						  -score          => $site->rel_score,
+						  -display_name   => $site->rel_score,
+						  -primary        => $site->rel_score,
+						  -label          => 1,
+						  );
+      
+      if ($site->strand == 1) {
+	  $ft_fw->add_SeqFeature($site_ft);
+      }else{
+      	  $ft_rev->add_SeqFeature($site_ft);
+      }
 
+      push @scores, $site->rel_score ;
+
+      #start relative to sequence start
+      my $site_start = $site->start;
+
+      #site relative to gene start?
+      print $report_fh "\tHit: Relative Score=".$site->rel_score."  Starting at position $site_start on strand ".$site->strand. "\n";
+      print $report_fh "\tSequence: ".$site->seq->seq."\n";
+      my $conservation = join ' ', @cons[($site->start)-1..($site->end)-1];
+      print $report_fh "\tConservation: ".$conservation."\n";
+      print $report_fh "\n";
+  }
+  
   #NOTE TO SELF - the relative score isn't really that helpful - it doesn't factor in how likely we are to see this 
   #sequence anyway. We really want some kind of IC based measurement - i really need a better understanding of how PWM 
   #searches work. 
 
-  #add a track for this motif #
-  my ($min, $max) = (0,0);
-  $min = min @scores;
-  $max = max @scores;
-  my $track =  $panel->add_track(
+  #add fw and bw tracks for this motif
+  my $track_fw =  $panel->add_track(
 				 -glyph     => 'graded_segments',
 				 -label     => 1,
 				 -bgcolor   => 'blue',
-				 -min_score => $min,
-				 -max_score => $max
+				 -min_score => min(@scores),
+				 -max_score => max(@scores)
 				);
+  $track_fw->add_feature($ft_fw);
   
-  $track->add_feature($ft);
+  my $track_rev =  $panel->add_track(
+				 -glyph     => 'graded_segments',
+				 -label     => 1,
+				 -bgcolor   => 'blue',
+				 -min_score => min(@scores),
+				 -max_score => max(@scores)
+				 );
+  $track_rev->add_feature($ft_rev);
  
   
 }
@@ -449,8 +473,8 @@ $report_fh->close;
 
 
 sub fetch_data {
-    my ($species, $identifier) = @_;
-
+    my ($species, $identifier, $five_up, $five_down, $three_up, $three_down, $report_fh) = @_;
+    
     # get an Ensembl gene adap for the species in question
     my $gene_ad = $REGISTRY->get_adaptor(
 					 $species,
@@ -460,7 +484,7 @@ sub fetch_data {
     
     # get an Ensembl slice adap for the species in question
     my $slice_ad = $REGISTRY->get_adaptor(
-                                        $species,
+					  $species,
 					  'core',
 					  'Slice',
 					 );
@@ -473,11 +497,13 @@ sub fetch_data {
     }
 
     my $gene = $gene_ad->fetch_by_stable_id($identifier);
+    my @transcripts = @{$gene->get_all_Transcripts};
 
-    print "Got gene $identifier\n" if $verbose;
-    print "On strand ".$gene->strand."\n" if $verbose;
-    print "from ".$gene->start. " to ". $gene->end."\n" if $verbose; 
-    
+    print $report_fh "Gene $identifier ($species) Chr".$gene->slice->seq_region_name.':'.$gene->start.'-'.$gene->end.'('.$gene->strand.")\n";
+    foreach(@transcripts){
+	print $report_fh "\t".$_->display_id.' Chr:'.$gene->slice->seq_region_name.':'.$_->start.'-'.$_->end."\n";
+    }
+
     #calculate start and end on the *top* strand
     my ($start, $end);
     if($gene->strand == 1){
@@ -489,7 +515,7 @@ sub fetch_data {
     }
 
 
-    print "Fetching genome slice on chr ".$gene->slice->seq_region_name." $start to $end\n" if $verbose;
+    print $report_fh "\tGenome slice Chr".$gene->slice->seq_region_name.":$start".'-'."$end\n\n";
 
     #fetch the slice on the top strand
     my $slice = $slice_ad->fetch_by_region($gene->slice->coord_system->name, $gene->slice->seq_region_name, $start, $end);
@@ -498,6 +524,7 @@ sub fetch_data {
     #get the position of the start of the gene, relative to the sequence (in gene direction)
     my $genestart = $gene->strand == 1 ? $gene->start - $slice->start : $slice->end - $gene->end;
     $genestart++;
+
    
     if ($gene->strand == -1){
       $slice = $slice->invert;
@@ -506,6 +533,7 @@ sub fetch_data {
 
     #and get the sequece from the slice
     my $seq = $nomask ? $slice->seq() : $slice->get_repeatmasked_seq()->seq;
+
 
     # stick seq in a Bio::Seq 
     my $bioseq = Bio::Seq->new(
@@ -523,6 +551,28 @@ sub fetch_data {
 					   -display_name => 'Gene Start',
 					   );
     $bioseq->add_SeqFeature($ft);
+    
+
+    
+    foreach (@transcripts){
+	my $tss_pos =   $gene->strand == 1 ? $_->start - $slice->start : $slice->end - $_->end;
+	$tss_pos++;
+	if ( ($tss_pos < 1) or ($tss_pos > length($seq))){
+	    print $report_fh "WARNING: Transcript at Chr".$gene->slice->seq_region_name.':'.$_->start.'-'.$_->end.'('.$_->strand.')'. 
+		              "has TSS outside of the range of the genome slice you have chosen.\n\n";
+	    next;
+	}
+	
+       	my $ft = Bio::SeqFeature::Generic->new(
+					       -start        => $tss_pos,
+					       -end          => $tss_pos,
+					       -primary      => $_->display_id,
+					       -display_name => $_->display_id,
+					       );
+	$bioseq->add_SeqFeature($ft);
+    }
+
+    
 
     return [$gene, $slice, $bioseq];
 }
