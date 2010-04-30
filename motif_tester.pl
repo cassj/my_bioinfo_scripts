@@ -31,6 +31,8 @@ use Bio::Annotation::SimpleValue;
 use Bio::Annotation::Collection;
 use Bio::SeqFeature::Generic;
 use TFBS::DB::FlatFileDir;
+use Bio::SeqFeature::Gene::GeneStructure;
+use Bio::SeqFeature::Gene::Transcript;
 
 
 use Bio::Graphics;
@@ -64,8 +66,12 @@ my $conservation = 70;
 my $threshold    = 80;
 my $window       = 50;
 my $report_file;
+my $ortho_pad  = 250;
 
 my $img_size = 800;
+
+#only return motifs if they are totally conserved in all species
+my $only_conserved = 0;
 
 GetOptions(
 	   'help|h'             => \$help,
@@ -93,6 +99,8 @@ GetOptions(
 	   'window_size=i'     => \$window,
 	   'image_size=i'      => \$img_size,
            'report_file|r=s'   => \$report_file,
+	   'ortho_pad=i'       => \$ortho_pad,
+	   'only_conserved'    => \$only_conserved
 );
 if($help)  {
     pod2usage(-exitstatus=>0, -verbose=>2);
@@ -186,10 +194,10 @@ foreach my $homology (@$homologies) {
      warn $taxon->binomial if $verbose;
     }
     
-    my $pad_five_up = $five_up ? $five_up + 250 : 0;
-    my $pad_five_down = $five_down ? $five_down + 250 : 0;
-    my $pad_three_up = $three_up ? $three_up + 250 : 0;
-    my $pad_three_down = $five_down ? $five_down + 250 : 0;
+    my $pad_five_up = $five_up ? $five_up + $ortho_pad : 0;
+    my $pad_five_down = $five_down ? $five_down + $ortho_pad : 0;
+    my $pad_three_up = $three_up ? $three_up + $ortho_pad : 0;
+    my $pad_three_down = $five_down ? $five_down + $ortho_pad : 0;
 
     $data->{$member->stable_id} = fetch_data($taxon->name, $member->stable_id, $pad_five_up, $pad_five_down, $pad_three_up, $pad_three_down, $report_fh);
   }
@@ -252,7 +260,7 @@ my $full_length = Bio::SeqFeature::Generic->new(
                                                );
 
 
-my ($genestart, $tss) = $data->{$identifier}->[2]->get_SeqFeatures();
+my @transcript_feats = $data->{$identifier}->[2]->get_SeqFeatures();
 
 
 #bottom strand? Draw length track first and gene underneath
@@ -261,24 +269,22 @@ if($data->{$identifier}->[0]->strand != 1){
 		      -glyph   => 'arrow',
 		      -tick    => 2,
 		      -fgcolor => 'black',
-		      -west    => 1,
+		      -east    => 1,
 		      );
 }
 
-$panel->add_track($genestart,
-		  -glyph   => 'diamond',
-		  -fgcolor => 'green',
-		  -bgcolor => 'green',
-		  -label => 1,
-		 );
-
-$panel->add_track($tss,
-		  -glyph   => 'diamond',
-		  -fgcolor => 'red',
-		  -bgcolor => 'red',
-		  -label => 1,
-		  -display_name => "TSSs",
-		 );
+foreach (@transcript_feats){
+  $panel->add_track($_,
+		    -glyph   => 'transcript2',
+		    -label => 1,
+                   -glyph       => 'transcript2',
+                    -bgcolor     => 'orange',
+                    -fgcolor     => 'black',
+                    -font2color  => 'red',
+                    -bump        =>  +1,
+                    -height      =>  12,
+		   );
+}
 
 #top strand? Draw gene first then length track
 if($data->{$identifier}->[0]->strand == 1){
@@ -389,33 +395,53 @@ while(my $pwm = $it->next){
   my @scores;
   #and the hits as subfeatures
   while( my $site = $it->next){
-      my $site_ft = Bio::SeqFeature::Generic->new(
-						  -start          => $site->start,
-						  -end            => $site->end,
-						  -strand         => $site->strand,
-						  -score          => $site->rel_score,
-						  -display_name   => $site->rel_score,
-						  -primary        => $site->rel_score,
-						  -label          => 1,
-						  );
+    
+    my @site_cons =  @cons[($site->start)-1..($site->end)-1];
+    @site_cons = reverse @site_cons if ($site->strand != $data->{$identifier}->[0]->strand);
+    my $conservation = join ' ', @site_cons;
+    
+    if ($only_conserved){
+      next unless (sum(@site_cons) == scalar(@site_cons));
+    }
+
+    
+    my $site_ft = Bio::SeqFeature::Generic->new(
+						-start          => $site->start,
+						-end            => $site->end,
+						-strand         => $site->strand,
+						-score          => $site->rel_score,
+						-display_name   => $site->rel_score,
+						-primary        => $site->rel_score,
+						-label          => 1,
+					       );
       
-      if ($site->strand == 1) {
-	  $ft_fw->add_SeqFeature($site_ft);
-      }else{
-      	  $ft_rev->add_SeqFeature($site_ft);
-      }
+    if ($site->strand == 1) {
+      $ft_fw->add_SeqFeature($site_ft);
+    }else{
+      $ft_rev->add_SeqFeature($site_ft);
+    }
+    
+    push @scores, $site->rel_score ;
+    
+    #start relative to sequence start
+    my $site_start = $site->start;
+    my $site_end = $site->end;
+    
+    #site relative to sequence start
+    print $report_fh "\tHit: Relative Score=".$site->rel_score."  On sequence at position $site_start to $site_end in the ".$site->strand. " direction \n";
+    
+    #site in genome co-ords
+    my $slice = $data->{$identifier}->[1];
+    
+    my $site_genome_start = $slice->strand == 1 ? $slice->start + ($site->start - 1) : $slice->start + ($slice->length - $site->end);
+    my $site_genome_end = $slice->strand == 1 ? $slice->start + ($site->end - 1) : $slice->start + ($slice->length - $site->start);
+    my $site_genome_strand = $site->strand * $slice->strand;
+    print $report_fh "\tGenome Co-ordinates: chr".$slice->seq_region_name.':'.$site_genome_start.'-'.$site_genome_end.' on strand '.$slice->strand;
+    
+    print $report_fh "\tSequence: ".$site->seq->seq."\n";
 
-      push @scores, $site->rel_score ;
-
-      #start relative to sequence start
-      my $site_start = $site->start;
-
-      #site relative to gene start?
-      print $report_fh "\tHit: Relative Score=".$site->rel_score."  Starting at position $site_start on strand ".$site->strand. "\n";
-      print $report_fh "\tSequence: ".$site->seq->seq."\n";
-      my $conservation = join ' ', @cons[($site->start)-1..($site->end)-1];
-      print $report_fh "\tConservation: ".$conservation."\n";
-      print $report_fh "\n";
+    print $report_fh "\tConservation: ".$conservation."\n";
+    print $report_fh "\n";
   }
   
   #NOTE TO SELF - the relative score isn't really that helpful - it doesn't factor in how likely we are to see this 
@@ -423,24 +449,27 @@ while(my $pwm = $it->next){
   #searches work. 
 
   #add fw and bw tracks for this motif
-  my $track_fw =  $panel->add_track(
-				 -glyph     => 'graded_segments',
-				 -label     => 1,
-				 -bgcolor   => 'blue',
-				 -min_score => min(@scores),
-				 -max_score => max(@scores)
-				);
-  $track_fw->add_feature($ft_fw);
+  if ($ft_fw->get_SeqFeatures){
+      my $track_fw =  $panel->add_track(
+					-glyph     => 'graded_segments',
+					-label     => 1,
+					-bgcolor   => 'blue',
+#					-min_score => min(@scores),
+#					-max_score => max(@scores)
+					);
+      $track_fw->add_feature($ft_fw);
+  }
   
-  my $track_rev =  $panel->add_track(
-				 -glyph     => 'graded_segments',
-				 -label     => 1,
-				 -bgcolor   => 'blue',
-				 -min_score => min(@scores),
-				 -max_score => max(@scores)
-				 );
-  $track_rev->add_feature($ft_rev);
- 
+  if ($ft_rev->get_SeqFeatures){
+      my $track_rev =  $panel->add_track(
+					 -glyph     => 'graded_segments',
+					 -label     => 1,
+					 -bgcolor   => 'blue',
+#					 -min_score => min(@scores),
+#					 -max_score => max(@scores)
+					 );
+      $track_rev->add_feature($ft_rev);
+  }
   
 }
 
@@ -519,21 +548,18 @@ sub fetch_data {
 
     #fetch the slice on the top strand
     my $slice = $slice_ad->fetch_by_region($gene->slice->coord_system->name, $gene->slice->seq_region_name, $start, $end);
- 
 
-    #get the position of the start of the gene, relative to the sequence (in gene direction)
-    my $genestart = $gene->strand == 1 ? $gene->start - $slice->start : $slice->end - $gene->end;
-    $genestart++;
-
-   
+    #invert the slice if gene is on the -ve strand
+    #note that this just changes the ->strand and revcomps the seq.
+    #->start and ->end are still given on top strand as per usual
     if ($gene->strand == -1){
       $slice = $slice->invert;
       print "Inverting slice to negative strand\n" if $verbose;
     }
 
+
     #and get the sequece from the slice
     my $seq = $nomask ? $slice->seq() : $slice->get_repeatmasked_seq()->seq;
-
 
     # stick seq in a Bio::Seq 
     my $bioseq = Bio::Seq->new(
@@ -541,46 +567,85 @@ sub fetch_data {
 			    -id  => $gene->display_id,
 			   );
 
-
-    
-    #and add a seq feature describing the location of the start of the gene
-    my $ft = Bio::SeqFeature::Generic->new(
-					   -start        => $genestart,
-					   -end          => $genestart,
-					   -primary      => 'genestart',
-					   -display_name => 'Gene Start',
-					   );
-    $bioseq->add_SeqFeature($ft);
-    
-
     
     foreach (@transcripts){
-	my $tss_pos =   $gene->strand == 1 ? $_->start - $slice->start : $slice->end - $_->end;
-	$tss_pos++;
-	if ( ($tss_pos < 1) or ($tss_pos > length($seq))){
-	    print $report_fh "WARNING: Transcript at Chr".$gene->slice->seq_region_name.':'.$_->start.'-'.$_->end.'('.$_->strand.')'. 
-		              "has TSS outside of the range of the genome slice you have chosen.\n\n";
-	    next;
-	}
-	
-       	my $ft = Bio::SeqFeature::Generic->new(
-					       -start        => $tss_pos,
-					       -end          => $tss_pos,
-					       -primary      => $_->display_id,
-					       -display_name => $_->display_id,
-					       );
-	$bioseq->add_SeqFeature($ft);
-    }
+      
+      my $trsc_location = &relative_to_slice_seq($_->start, $_->end, $slice);
 
-    
+      #don't bother if the transcript doesn't actually overlap our sequence
+      next unless $trsc_location->{overlap};
+
+      my $transcript_ft = Bio::SeqFeature::Generic->new(
+							-start  => max($trsc_location->{start}, 1),
+							-end    => min($trsc_location->{end}, $bioseq->length),
+							-display_name => $_->stable_id,
+						       );
+ 
+      my $location = &relative_to_slice_seq($_->start, $_->end, $slice);
+      
+      #coding_start and _end are relative to the 5' of the transcript
+      #my $coding_region_start  = $_->coding_region_start;
+      #my $coding_region_end = $_->coding_region_end; 
+ 
+      #although the exons are given in the order they appear in the transcript.
+      my @exons = @{$_->get_all_Exons};
+      foreach (@exons){
+	
+	#get exon position relative to sequence
+	my $exon_location  =  &relative_to_slice_seq($_->start, $_->end, $slice);
+	next unless $exon_location->{start_contained};
+	
+	$transcript_ft->add_SeqFeature(
+				       Bio::SeqFeature::Generic->new(
+								     -start        => $exon_location->{start},
+								     -end          => min($exon_location->{end}, length($seq)),
+								     -display_name => $_->stable_id,
+								    )
+				      );
+      }
+
+
+
+	$bioseq->add_SeqFeature($transcript_ft);
+   }
 
     return [$gene, $slice, $bioseq];
 }
 
 
+#takes a region (start and end pos on the top strand)
+#and a slice and returns the co-ordiates relative to the slice sequence, 
+#(on whichever strand the slice sequence is).
+#returns a hash-ref of 
+#start 
+#end 
+#overlap (true if any of the region is in the slice)
+#start_contained (true if the start of the region is in the slice) 
+#end_contained (true if the end of the region is in the slice)
+sub relative_to_slice_seq{
+  my ($start, $end, $slice) = @_;
+
+  my $new_start = $slice->strand == 1 ? $start - $slice->start : $slice->end - $end;
+  $new_start++;
+
+  my $new_end = $slice->strand == 1 ? $end -$slice->start : $slice->end - $start;
+  $new_end++;
+
+  my $start_contained = ($new_start > 1) && ($new_start < $slice->length) ? 1:0;
+  my $end_contained = ($new_end > 1) && ($new_end < $slice->length) ? 1:0;
+
+  my $overlap = ($start_contained
+		 || $end_contained
+		 || ( ($new_start < 1) && ($new_end > $slice->length) )
+		)? 1:0;
+
+  return ({start=>$new_start, end=>$new_end, overlap=>$overlap, start_contained=>$start_contained, end_contained=>$end_contained});
+  
+}
+
 
 __END__
-
+    
 
 =head1 NAME
 
@@ -676,6 +741,14 @@ Useful if you want to retrieve 3'UTR regions
 
 NOTE: Defining three_up and five_down makes no sense and will result 
 in an error.
+
+=item B<--ortho_pad> <integer value>
+
+OPTIONAL: defaults to 250
+Values of five_up, five_down, three_up, three_down are also used to determine 
+the region to retrieve around the start of each orthologous gene. To maximise 
+the possibility of a good alignment to the search gene, you can get extra sequence
+from the ortholgs by setting --ortho_pad to the amount of extra bases you would like.
 
 
 =item B<-m or --msa> <multiple sequence alignment algorithm>
