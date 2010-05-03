@@ -10,6 +10,7 @@ colnames(ky)[1] <-"IlluminaID"
 colnames(limma)[1]<-"IlluminaID"
 
 
+
 #data is sentrix mouse ref 6 according to the paper
 #this has old targetIds, that are no longer in use. So, get the probe seqs
 #from old reMoat data
