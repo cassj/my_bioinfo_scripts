@@ -204,6 +204,8 @@ foreach my $homology (@$homologies) {
 
 }
 
+exit if $available_species;
+
 
 # ok, do the msa.
 my @seqs = map {$data->{$_}->[2]} keys %$data;
@@ -398,8 +400,9 @@ while(my $pwm = $it->next){
     
     my @site_cons =  @cons[($site->start)-1..($site->end)-1];
     @site_cons = reverse @site_cons if ($site->strand != $data->{$identifier}->[0]->strand);
-    my $conservation = join ' ', @site_cons;
+    my $conservation = join ' ', map {sprintf("%.2f", $_)} @site_cons;
     
+	 
     if ($only_conserved){
       next unless (sum(@site_cons) == scalar(@site_cons));
     }
@@ -436,7 +439,8 @@ while(my $pwm = $it->next){
     my $site_genome_start = $slice->strand == 1 ? $slice->start + ($site->start - 1) : $slice->start + ($slice->length - $site->end);
     my $site_genome_end = $slice->strand == 1 ? $slice->start + ($site->end - 1) : $slice->start + ($slice->length - $site->start);
     my $site_genome_strand = $site->strand * $slice->strand;
-    print $report_fh "\tGenome Co-ordinates: chr".$slice->seq_region_name.':'.$site_genome_start.'-'.$site_genome_end.' on strand '.$slice->strand;
+
+    print $report_fh "\tGenome Co-ordinates: chr".$slice->seq_region_name.':'.$site_genome_start.'-'.$site_genome_end.' on strand '.$site_genome_strand;
     
     print $report_fh "\tSequence: ".$site->seq->seq."\n";
 
