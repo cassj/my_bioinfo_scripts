@@ -12,6 +12,7 @@ source("scripts/qw.R")
 args<-commandArgs()
 eval(parse(text=args[grep('filename', args)]))
 eval(parse(text=args[grep('motiffile', args)]))
+eval(parse(text=args[grep('outfile', args)]))
 
 rd <- get(load(filename))
 
