@@ -5,8 +5,11 @@ library(IRanges)
 library(rGADEM)
 library(MotIV)
 library(Biostrings)
+library(seqLogo)
 library(BSgenome.Mmusculus.UCSC.mm9)
+library(BCRANK)
 source("scripts/qw.R")
+#
 
 # call like R --vanilla --args filename=\"thing\" motiffile=\"/space/motifs/MA\"
 args<-commandArgs()
@@ -14,7 +17,6 @@ eval(parse(text=args[grep('filename', args)]))
 eval(parse(text=args[grep('motiffile', args)]))
 eval(parse(text=args[grep('outfile', args)]))
 
-rd <- get(load(filename))
 
 # load the motif (rest is MA0138.2 )
 motif <- as.matrix(read.table(motiffile))
@@ -82,3 +84,30 @@ for (i in 1:length(sequences)){
 
 
 save(sites, file="Top10KSites.R")
+
+#we need to o some QC plots here, of the number of hits as we go down the list etc.
+
+
+#get just the actual hits:
+site.seqs <- sites[,4]
+site.seqs <- site.seqs[site.seqs!=""]
+
+site.seqs.mat <- t(sapply(site.seqs[1:3], function(x){unlist(strsplit(x, split=""))}))
+
+
+#slide down the list in jumps of 100, making a pwm for each 100
+#and plotting it
+n <- 1000
+for(n in 1:length(site.seqs)){
+  if(i%%n == 0){
+    these <- site.seqs.mat[(i-(n-1)):i,]
+    counts <- apply(site.seqs.mat, 2, table)
+    totals <- apply(counts, 2, sum)
+    prob <- counts/totals
+    
+  }
+}
+
+     
+
+     
