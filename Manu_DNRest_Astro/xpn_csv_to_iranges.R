@@ -11,34 +11,64 @@ colnames(limma)[1]<-"IlluminaID"
 
 
 
+#Annotation from Illumina
+lumi.annot<-read.csv("lib/Mouse-6_V1.csv")
+
+#remove anything with many-to-one probe-to-target mapping, there are only a few
+dups<-as.character(lumi.annot$Target[which(duplicated(lumi.annot$Target))])
+lumi.annot<-lumi.annot[-1*which(as.character(lumi.annot$Target) %in% dups),]
+rownames(lumi.annot)<-as.character(lumi.annot$Target)
+
+#map the TargetID back to a ProbeID using the original Illumina data
+ProbeID<-lumi.annot[as.character(limma$IlluminaID), "ProbeId"]
+limma<-cbind(limma, ProbeID)
+length(which(is.na(as.character(limma$ProbeID))))
+#[1] 704
+limma<-limma[-1*(which(is.na(as.character(limma$ProbeID)))),]
+rownames(limma)<-as.character(limma$ProbeID)
+
+ProbeID<-lumi.annot[as.character(ky$IlluminaID),"ProbeId"]
+ky<-cbind(ky, ProbeID)
+ky<-ky[-1*(which(is.na(as.character(ky$ProbeID)))),]
+rownames(ky)<-as.character(ky$ProbeID)
+
+
 #data is sentrix mouse ref 6 according to the paper
 #this has old targetIds, that are no longer in use. So, get the probe seqs
 #from old reMoat data
 old.annot<-read.csv("lib/IlluminaMouseV1.txt", sep="\t", header=T)
+rownames(old.annot)<-as.character(old.annot$ProbeId0)
 
-#a few are duplicated
-#old.annot[duplicated(as.character(old.annot[,2])),"Symbols"]
-# [1] Txn1 Slc25a33            Txn1 Slc25a33            Eef1a1                  
-# [4] Eef1a1                   Eef1a1                   LOC380687 BC096042 Gapdh
-# [7] LOC380687 BC096042 Gapdh LOC380687 BC096042 Gapdh Ubc                     
-#[10] Ubc                      Ubc                      AK013903 Rps9           
-#[13] AK013903 Rps9            AK013903 Rps9            Tubb2b                  
-#[16] Actb                     Actb              
+##ok, this appears to be actual mm9 data.
+#except it isn't the same format, so I'll have to faff about with it.
+#old.annot <- read.csv("lib/Annotation_Illumina_Mouse_WG_V1_mm9.txt", sep="\t", header=T)
+#rownames(old.annot)<-as.character(old.annot$ProbeId_0)
 
-#but very few, so let's just remove the dups and go with the probe locations:
-old.annot<-old.annot[!duplicated(old.annot[,2]),]
-rownames(old.annot)<-old.annot[,2]
-limma.annot<-cbind(limma, old.annot[as.character(limma$IlluminaID),])
-ky.annot<-cbind(ky, old.annot[as.character(ky$IlluminaID),])
+limma.annot<-cbind(limma, old.annot[as.character(limma$ProbeID),])
+ky.annot<-cbind(ky, old.annot[as.character(ky$ProbeID),])
 
 #ditch anything for which we have no annotation
 remove<-which(is.na(limma.annot$Chromosome))
-limma.annot<-limma.annot[-remove,]
+if(length(remove)>0){limma.annot<-limma.annot[-remove,]}
+
+remove<-which(is.na(limma.annot$Start))
+if(length(remove)>0){limma.annot<-limma.annot[-remove,]}
+
+remove<-which(is.na(limma.annot$End))
+if(length(remove)>0){limma.annot<-limma.annot[-remove,]}
+
 
 remove<-which(is.na(ky.annot$Chromosome))
-ky.annot<-ky.annot[-remove,]
+if(length(remove)>0){ky.annot<-ky.annot[-remove,]}
 
-#and liftOver the mm8 probe positions
+remove<-which(is.na(ky.annot$Start))
+if(length(remove)>0){ky.annot<-ky.annot[-remove,]}
+
+remove<-which(is.na(ky.annot$End))
+if(length(remove)>0){ky.annot<-ky.annot[-remove,]}
+
+
+##and liftOver the mm8 probe positions
 to.map<-limma.annot[,qw(Chromosome, Start, End)]
 colnames(to.map) <- c("chr","start","end")
 mapped <- liftOver(to.map , chain.file="lib/mm8ToMm9.over.chain")
@@ -51,26 +81,36 @@ ky.annot[,qw(Chromosome, Start, End)] <- mapped[,qw(chr,start,end)]
 
 #ditch anything for which we have no region
 remove<-which(is.na(limma.annot$Chromosome))
-limma.annot<-limma.annot[-remove,]
+if(length(remove)>0){limma.annot<-limma.annot[-remove,]}
 
 remove<-which(is.na(ky.annot$Chromosome))
-ky.annot<-ky.annot[-remove,]
+if(length(remove)>0){ky.annot<-ky.annot[-remove,]}
 
 #we can't use anything mapped to a random chr, so
 ids<-grep('random', ky.annot$Chromosome)
-ky.annot<-ky.annot[(-1*ids),]
+if(length(ids)>0){ky.annot<-ky.annot[(-1*ids),]}
 
 ids<-grep('random', limma.annot$Chromosome)
-limma.annot<-limma.annot[(-1*ids),]
+if(length(ids)>0){limma.annot<-limma.annot[(-1*ids),]}
 
+
+#and just a few are wierdly the wrong length, no idea why.
+#liftOver could explain slight variation from 50, but not much
+
+remove <- which((limma.annot$End - limma.annot$Start) > 100 )
+if(length(remove)>0){limma.annot<-limma.annot[-remove,]}
+
+
+remove <- which((ky.annot$End - ky.annot$Start) > 100 )
+if(length(remove)>0){ky.annot<-ky.annot[-remove,]}
 
 
 #create a RangedData object for the region start and end:
 library(IRanges)
 
 #fix colnames
-colnames(limma.annot)[c(1,2,5,6,24,25)]<-qw(IlluminaSentrixTargetID, log2FoldChange, pVal, FDR, SpliceJunction, PerfectMatch)
-colnames(ky.annot)[c(1,2,3,4,5,22,23)]<-qw(IlluminaSentrixTargetID, log2FoldChange, FoldChange, pVal, FDR, SpliceJunction, PerfectMatch)
+colnames(limma.annot)[c(1,2,5,6,25,26)]<-qw(IlluminaSentrixTargetID, log2FoldChange, pVal, FDR, SpliceJunction, PerfectMatch)
+colnames(ky.annot)[c(1,2,3,4,5,23,24)]<-qw(IlluminaSentrixTargetID, log2FoldChange, FoldChange, pVal, FDR, SpliceJunction, PerfectMatch)
 
 
 #we have to give them names to avoid a bug in ChIPpeakAnnot if we want to use it later
@@ -110,6 +150,7 @@ save(rd.limma, file="expression_data/RangedData_Limma.R")
 save(rd.ky, file="expression_data/RangedData_KY.R")
 
              
-
+write.csv(limma.annot, file="expression_data/limma_annot.csv")
+write.csv(ky.annot, file="expression_data/ky_annot.csv")
 
 

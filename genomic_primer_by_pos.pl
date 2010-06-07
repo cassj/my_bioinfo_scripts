@@ -89,7 +89,7 @@ my %primer3_params = (
                       PRIMER_SELF_END           => 2,
                       PRIMER_MAX_DIFF_TM        => 5,
                       PRIMER_MAX_SIZE           => 27,
-                      PRIMER_NUM_RETURN         => 30
+                      PRIMER_NUM_RETURN         => 10
                      );
 
 
