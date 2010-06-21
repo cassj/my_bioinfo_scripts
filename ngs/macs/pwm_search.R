@@ -75,7 +75,7 @@ for (i in 1:length(sequences)){
   seq <- sequences[[i]]
   
                                         # forward hits
-  f.hits <- matchPWM(pwm, seq, min.score='70%')
+  f.hits <- matchPWM(pwm, seq, min.score='0%')
   best.f <- 0
   if(length(f.hits)>0){
     for(j in 1:length(f.hits)){
@@ -89,7 +89,7 @@ for (i in 1:length(sequences)){
   
   
                                         # reverse hits
-  r.hits <- matchPWM(reverseComplement(pwm), seq, min.score='70%')
+  r.hits <- matchPWM(reverseComplement(pwm), seq, min.score='0%')
   best.r <- 0
   if(length(r.hits)>0){
     for(j in 1:length(r.hits)){
@@ -124,7 +124,8 @@ save(sites, file=paste(outdir, "/",motif.name,"_Top10KSites.R",sep=""))
 #######
 # Generate QC plots of the enrichment of hits as we go down the list
 
-#calc enrichment as a sliding window
+#NB perc_motifs doesn't make any sense if we're going to use the best score - they should all have one.
+calc enrichment as a sliding window
 n <- 20
 num.motifs <- numeric()
 ave.score <- numeric()
@@ -152,7 +153,18 @@ plot(n*(1:length(ave.score)),ave.score,  main=paste("Average motif score in a sl
 dev.off()
 
 
+#actually, if they're all going to get a score, we might as well just plot the score v rank:
+fl <- paste(outdir,"/score_",motif.name,'.png', sep = "")
+plot(1:nrow(sites),sites$score, pch=".")
+dev.off()
 
+#hmm, not much of a correlation to binding strength, although it is more apparent in the ave plot. 
+#what does the distribution of scores look like then?
+#And why the hell can't we just use this to give us a p-value?
+
+fl <- paste(outdir,"/score_density_",motif.name,'.png', sep = "")
+plot(density(sites$score))
+dev.off()
 
 
 
