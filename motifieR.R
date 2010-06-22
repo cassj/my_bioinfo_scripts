@@ -9,8 +9,8 @@ library(Biostrings)
 
 
 #testing
-#filename<-"Macs/run4/top10K.fa"
-#motiffile<-"/space/motifs/MA0138.2.pfm"   #REST
+filename<-"Macs/run4/top10K.fa"
+motiffile<-"/space/motifs/MA0138.2.pfm"   #REST
 
 
 #Virtual class for all matrix representations of motifs
@@ -25,7 +25,7 @@ setClass("motifMatrix",
 
 setMethod("initialize","motifMatrix", function(.Object, data, alphabet=NULL, bg=NULL){
    data <- as.matrix(data)
-   if(!is.numeric(foo))
+   if(!is.numeric(data))
      stop("Data must be numeric")
    
    #if alphabet not defined, use rownames of data matrix
@@ -62,6 +62,11 @@ setMethod("initialize","motifMatrix", function(.Object, data, alphabet=NULL, bg=
    .Object@bg <- bg
    return(.Object)
  })
+
+
+#TODO getters for data, alphabet, bg.
+
+
 
 
 #Position Frequency Matrix
@@ -114,36 +119,84 @@ setClass("motif",
          )
 
 
-#only define ppm, pwm, ic if called
+#setters - not for public consumption
+
+setGeneric(".ppm<-",
+           function(.Object, value) standardGeneric(".ppm<-"))
+setReplaceMethod(".ppm",
+                 signature=signature("motif", "ppm"),
+                 function(.Object,value) {
+                     .Object@ppm <- value
+                     .Object
+                 })
+
+
+setGeneric(".pwm<-",
+           function(.Object, value) standardGeneric(".pwm<-"))
+setReplaceMethod(".pwm",
+                 signature=signature("motif", "pwm"),
+                 function(.Object,value) {
+                     .Object@pwm <- value
+                     .Object
+                 })
+
+setGeneric(".ic<-",
+           function(.Object, value) standardGeneric(".ic<-"))
+setReplaceMethod(".ic",
+                 signature=signature("motif", "numeric"),
+                 function(.Object,value) {
+                     .Object@pwm <- value
+                     .Object
+                 })
+
+
+#getters
+setGeneric("pfm",
+           function(.Object) standardGeneric("pfm"))
+setMethod('pfm',
+          signature=signature(.Object="motif"),
+          function(.Object){.Object@pfm}
+)
+
+setGeneric("ppm",
+           function(.Object) standardGeneric("ppm"))
+setMethod('ppm',
+          signature=signature(.Object="motif"),
+          function(.Object){
+            if(!is.null(.Object@ppm))
+              return(.Object@ppm)
+            if(is.null(.Object@pfm))
+              return(NULL)
+            data <- prop.table(.Object@pfm@data, margin=2)
+            .ppm(.Object) <- new("ppm", data=data)
+            
+            return(ppm(.Object))
+          })
+
+
+setGeneric("pwm",
+           function(.Object) standardGeneric("pwm"))
+setMethod('pwm',
+          signature=signature(.Object="motif"),
+          function(.Object){
+            if(!is.null(.Object@pwm))
+              return(.Object@pwm)
+            if(is.null(ppm(.Object)))
+              return(NULL)
+            data <- log2(ppm(.Object)/bg(ppm))
+            .pwm(.Object)<-new("pwm", data=data, bg=bg(ppm))
+            return(pwm(.Object))
+          })
 
 
 
 
 
 
+#getters
+setMethod('pfm', 'motif',
+          function(.Object){.Object@pfm})
 
-
-#this should generate a motif
-#read transfac formatted pfms (jaspar are same format)
-read.transfac <- read.jaspar <- function(file){
-  pfm <- as.matrix(read.table(file))
-  rownames(pfm) <- c('A', 'C', 'G', 'T')
-  colnames(pfm) <- paste("pos",1:ncol(pfm), sep="")
-  return(pfm)
-}
-
-  
-#many motifs suffer from small sample biases, add a pseudocount to cope with this
-#counts are added by position (count/N added to each letter)
-#can think of it as a bayesian prior if you like
-add.pseudocount <- function(pfm, count=1){
-  return(pfm + (pseudocount/nrow(pfm)))
-}
-
-#check ppm cols sum to 1
-valid.ppm <- function(ppm){
-  return(all(apply(ppm,2,sum)==1))
-}
 
 #convert relative frequencies to probabilites
 pfm.to.ppm <- function(pfm){
@@ -152,24 +205,6 @@ pfm.to.ppm <- function(pfm){
 }
 
   
-#sequences should be a XStringSet
-bg.freqs <- function(sequences){
-
-  ab <- c("A","C","G","T")
-
-  tot <- sum(nchar(sequences))
-  B <- lapply(ab, function(x){
-    sum(vcountPattern(x,sequences))/tot
-  })
-  names(B) <- ab
-  return(B)
-}
-
-uniform.bg <- function(ppm){
-  bg <- rep(1/nrow(ppm), nrow(ppm) )
-  names(bg) <- rownames(ppm)
-  return(bg)
-}
   
 ppm.to.pwm <- function(ppm, bg=uniform.bg(ppm)){
     
@@ -182,8 +217,6 @@ ppm.to.pwm <- function(ppm, bg=uniform.bg(ppm)){
   return(pwm)
 }
 
-
-
 #information content (entropy relative to background model) for each column 
 ppm.to.ic <- function(ppm, bg=uniform.bg(ppm)){
 
@@ -195,6 +228,45 @@ ppm.to.ic <- function(ppm, bg=uniform.bg(ppm)){
   ic <- ppm * ppm.to.pwm(ppm)
   return(ic)
 }
+
+
+
+
+
+
+####
+# Utilities
+####
+
+#this should generate a motif
+#read transfac formatted pfms (jaspar are same format)
+read.transfac <- read.jaspar <- function(file, pseudocount=0){
+  pfm <- as.matrix(read.table(file))
+  rownames(pfm) <- c('A', 'C', 'G', 'T')
+  pfm <- new("pfm",data=pfm, pseudocount=pseudocount)
+  return(new("motif",pfm=pfm))
+}
+
+  
+
+#calculate background frequencies from an XStringSet
+bg.freqs <- function(sequences){
+
+  ab <- c("A","C","G","T")
+
+  tot <- sum(nchar(sequences))
+  B <- lapply(ab, function(x){
+    sum(vcountPattern(x,sequences))/tot
+  })
+  names(B) <- ab
+  return(B)
+}
+
+
+
+
+
+
 
 #draw sequence logo for a ppm
 seqlogo <- function(ppm, bg=uniform.bg(ppm), ic.scale=T){    
