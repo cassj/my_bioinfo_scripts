@@ -1,0 +1,36 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use IO::File;
+use Data::Dumper;
+
+my $fh = new IO::File;
+my $filename = $ARGV[0];
+die "Usage:\n\texport2filtered.pl export.txt > filtered.txt" unless $filename;
+ 
+$fh->open($filename) or die "can't open file $filename: $!";
+
+my ($total_count, $filter_count) = 0;
+
+while(<$fh>){
+  my @row = split "\t", $_;
+  $total_count++;
+  my $filter = pop @row;
+  #deal with windows or nix line endings. 
+  $filter =~ s/\r?\n$//;
+  #failed filter?
+  next if ($filter eq 'N');
+  #failed mapping?
+  next unless ($row[13]); 
+  $filter_count++; 
+}
+
+print "Total Count: $total_count\n";
+print "Filter Count: $filter_count\n";
+
+$fh->close;
+
+
+
