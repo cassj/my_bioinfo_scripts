@@ -1,5 +1,5 @@
 #need to make this into a package.
-library(IRanges)
+#library(IRanges)
 library(Biostrings)
 
 #Definitions:
@@ -19,11 +19,11 @@ setClass("motifMatrix",
            "VIRTUAL",
            data="matrix",
            alphabet="character",
-           bg="numeric"
+           background="numeric"
            )
          )
 
-setMethod("initialize","motifMatrix", function(.Object, data, alphabet=NULL, bg=NULL){
+setMethod("initialize","motifMatrix", function(.Object, data, alphabet=NULL, background=NULL){
    data <- as.matrix(data)
    if(!is.numeric(data))
      stop("Data must be numeric")
@@ -45,26 +45,59 @@ setMethod("initialize","motifMatrix", function(.Object, data, alphabet=NULL, bg=
    }
    
    #if bg not defined, all alphabet elements equiprobable:
-   if(is.null(bg)) {
-     bg <- rep(1/nrow(data), nrow(data))
-     names(bg) <- alphabet
+   if(is.null(background)) {
+     background <- rep(1/nrow(data), nrow(data))
+     names(background) <- alphabet
    }
-   if(!sum(bg)==1)
+   if(!sum(background)==1)
      stop("background probabilties do not sum to 1")
-   if(! all(names(bg) %in% alphabet))
+   if(! all(names(background) %in% alphabet))
      stop("Background probabilites defined for elements not found in alphabet")
-   if(! all(alphabet %in% names(bg)))
+   if(! all(alphabet %in% names(background)))
      stop("Some elements in alphabet have no corresponding background probability")
 
    #everything valid. build object.
    .Object@data <-data
    .Object@alphabet <- alphabet
-   .Object@bg <- bg
+   .Object@background <- background
    return(.Object)
  })
 
 
-#TODO getters for data, alphabet, bg.
+#getters
+setGeneric("data",
+           function(.Object) standardGeneric("data"))
+setMethod("data",
+          signature=signature("motifMatrix"),
+          function(.Object) {
+            .Object@data
+          })
+
+setGeneric("alphabet",
+           function(.Object) standardGeneric("alphabet"))
+setMethod("alphabet",
+          signature=signature("motifMatrix"),
+          function(.Object) {
+            .Object@alphabet
+          })
+
+setGeneric("background",
+           function(.Object) standardGeneric("background"))
+setMethod("background",
+          signature=signature("motifMatrix"),
+          function(.Object) {
+            .Object@background
+          })
+
+setGeneric("bg",
+           function(.Object) standardGeneric("bg"))
+setMethod("bg",
+          signature=signature("motifMatrix"),
+          function(.Object) {
+            .Object@background
+          })
+
+
 
 
 
@@ -83,6 +116,17 @@ setMethod("initialize","pfm",
           }
           )
 
+setGeneric("pseudocount",
+           function(.Object) standardGeneric("pseudocount"))
+setMethod("pseudocount",
+          signature=signature("motifMatrix"),
+          function(.Object) {
+            .Object@data
+          })
+
+
+
+
 
 #Position Probability (relative freq) Matrix
 setClass("ppm",
@@ -94,6 +138,10 @@ setMethod("initialize","ppm",
             callNextMethod(.Object, data, ...)
           }
           )
+
+
+
+
 
 #Position Weight Matrix
 setClass("pwm",
@@ -108,16 +156,42 @@ setClassUnion("pfmOrNULL",c("pfm","NULL"))
 setClassUnion("ppmOrNULL",c("ppm","NULL"))
 setClassUnion("pwmOrNULL",c("pwm","NULL"))
 setClassUnion("numericOrNULL",c("numeric","NULL"))
+setClassUnion("characterOrNULL",c("character","NULL"))
 
 setClass("motif",
          representation=representation(
            pfm = "pfmOrNULL",
            ppm = "ppmOrNULL",
            pwm = "pwmOrNULL",
-           ic = "numericOrNULL"
+           ic = "numericOrNULL",
+           alphabet="characterOrNULL"
            )
          )
 
+
+setMethod("initialize","motif",
+          function(.Object, pfm=NULL, ppm=NULL){
+            
+            .Object@pfm <- pfm
+            .Object@ppm <- ppm
+            
+            if(!is.null(.Object@pfm)){ #got a pfm
+              if(!is.null(.Object@ppm)){ #also got a ppm?
+                if(! (all(alphabet(pfm) %in% alphabet(ppm)) && all(alphabet(ppm) %in% alphabet(pfm) )))
+                  stop("mismatching alphabets in supplied pfm and ppm")
+                warning("Using supplied pfm and ppm. Might be better to provide only pfm, from which ppm can be derived.")
+                .Object@alphabet <- alphabet(pfm)
+              }
+            }else{ 
+              if(!is.null(.Object@ppm)){ #just got a ppm
+                .Object@alphabet <- alphabet(ppm)
+              } else{
+                stop("Please provide either a pfm or pwm object") 
+              }
+            }
+            .Object
+          }
+          )
 
 #setters - not for public consumption
 
@@ -126,6 +200,9 @@ setGeneric(".ppm<-",
 setReplaceMethod(".ppm",
                  signature=signature("motif", "ppm"),
                  function(.Object,value) {
+                     if(!is.null(alphabet(.Object))){
+
+                     }
                      .Object@ppm <- value
                      .Object
                  })
@@ -145,12 +222,21 @@ setGeneric(".ic<-",
 setReplaceMethod(".ic",
                  signature=signature("motif", "numeric"),
                  function(.Object,value) {
-                     .Object@pwm <- value
-                     .Object
+                   .Object@ic <- value
+                   .Object
                  })
 
 
 #getters
+
+
+setGeneric("alphabet",
+           function(.Object) standardGeneric("alphabet"))
+setMethod('alphabet',
+          signature=signature(.Object="motif"),
+          function(.Object){.Object@alphabet}
+)
+
 setGeneric("pfm",
            function(.Object) standardGeneric("pfm"))
 setMethod('pfm',
@@ -183,53 +269,41 @@ setMethod('pwm',
               return(.Object@pwm)
             if(is.null(ppm(.Object)))
               return(NULL)
-            data <- log2(ppm(.Object)/bg(ppm))
-            .pwm(.Object)<-new("pwm", data=data, bg=bg(ppm))
+            data <- log2(data(ppm(.Object))/bg(ppm(.Object)))
+            .pwm(.Object)<-new("pwm", data=data, background=bg(ppm(.Object)))
             return(pwm(.Object))
           })
 
 
 
 
+setGeneric("ic",
+           function(.Object) standardGeneric("ic"))
+setMethod('ic',
+          signature=signature(.Object="motif"),
+          function(.Object){
+            if(!is.null(.Object@ic))
+              return(.Object@ic)
+            if(is.null(ppm(.Object)))
+              return(NULL)
+            data <- data(ppm(.Object)) * data(pwm(.Object))
+            data <- apply(data,2,sum)
+            .ic(.Object)<-data
+            return(ic(.Object))
+          })
 
 
-#getters
-setMethod('pfm', 'motif',
-          function(.Object){.Object@pfm})
+setGeneric("max.ic",
+          function(.Object) standardGeneric("max.ic"))
 
+setMethod("max.ic",
+          signature=signature(.Object="motif"),
+          function(.Object){
+            return(log2(length(alphabet(.Object))))
+          }
+          )
 
-#convert relative frequencies to probabilites
-pfm.to.ppm <- function(pfm){
-  #just does: pfm[,i]/sum(pfm[,i]) for each col)
-  return(prop.table(pfm, margin=2))
-}
-
-  
-  
-ppm.to.pwm <- function(ppm, bg=uniform.bg(ppm)){
-    
-  #careful if we have 0 in the ppm, we'll get Inf
-  if(length(which(ppm==0))>0){
-    warning("ppms containing zeros will generate Inf values in pwm. Consider pseudocounts")
-    }
-  pwm <- log2(ppm/bg)
-  
-  return(pwm)
-}
-
-#information content (entropy relative to background model) for each column 
-ppm.to.ic <- function(ppm, bg=uniform.bg(ppm)){
-
-  #careful if we have 0 in the ppm, we'll get NaN
-   if(length(which(ppm==0))>0){
-     warning("ppms containing zeros will generate NaN IC values.  Consider pseudocounts")
-    }
-   
-  ic <- ppm * ppm.to.pwm(ppm)
-  return(ic)
-}
-
-
+        
 
 
 
@@ -264,102 +338,3 @@ bg.freqs <- function(sequences){
 
 
 
-
-
-
-
-#draw sequence logo for a ppm
-seqlogo <- function(ppm, bg=uniform.bg(ppm), ic.scale=T){    
-
-  if(!valid.ppm(ppm)) stop("ppm is invalid. Columns should sum to 1")
-
-  alphabet <- rownames(ppm)
-  
-chars <- c("A", "C", "G", "T")
-    letters <- list(x = NULL, y = NULL, id = NULL, fill = NULL)
-    npos <- ncol(pwm)
-    if (ic.scale) {
-        ylim <- 2
-        ylab <- "Information content"
-        facs <- pwm2ic(pwm)
-    }
-    else {
-        ylim <- 1
-        ylab <- "Probability"
-        facs <- rep(1, npos)
-    }
-    wt <- 1
-    x.pos <- 0
-    for (j in 1:npos) {
-        column <- pwm[, j]
-        hts <- 0.95 * column * facs[j]
-        letterOrder <- order(hts)
-        y.pos <- 0
-        for (i in 1:4) {
-            letter <- chars[letterOrder[i]]
-            ht <- hts[letterOrder[i]]
-            if (ht > 0) 
-                letters <- addLetter(letters, letter, x.pos, 
-                  y.pos, ht, wt)
-            y.pos <- y.pos + ht + 0.01
-        }
-        x.pos <- x.pos + wt
-    }
-    grid.newpage()
-    bottomMargin = ifelse(xaxis, 2 + xfontsize/3.5, 2)
-    leftMargin = ifelse(yaxis, 2 + yfontsize/3.5, 2)
-    pushViewport(plotViewport(c(bottomMargin, leftMargin, 2, 
-        2)))
-    pushViewport(dataViewport(0:ncol(pwm), 0:ylim, name = "vp1"))
-    grid.polygon(x = unit(letters$x, "native"), y = unit(letters$y, 
-        "native"), id = letters$id, gp = gpar(fill = letters$fill, 
-        col = "transparent"))
-    if (xaxis) {
-        grid.xaxis(at = seq(0.5, ncol(pwm) - 0.5), label = 1:ncol(pwm), 
-            gp = gpar(fontsize = xfontsize))
-        grid.text("Position", y = unit(-3, "lines"), gp = gpar(fontsize = xfontsize))
-    }
-    if (yaxis) {
-        grid.yaxis(gp = gpar(fontsize = yfontsize))
-        grid.text(ylab, x = unit(-3, "lines"), rot = 90, gp = gpar(fontsize = yfontsize))
-    }
-    popViewport()
-    popViewport()
-    par(ask = FALSE)
-
-}
-  
-
-
-  
-
-#get sample regions from a genome
-sample.genome <- function(genome,nsamples, nbases, chrs=NULL){
-  
-  if(is.null(chrs)){chrs <- seqnames(genome)}
-
-  #get chr lengths
-  chr.lengths <- seqlengths(genome)[chrs]
-
-  # weight chrs for sampling by seq length
-  genome.len <- sum(as.numeric(chr.lengths))
-  chr.weights <- chr.lengths/genome.len
-
-  # choose chrs to sample from 
-  sample.chrs <- sample(chrs, nsamples, replace=T, prob=chr.weights)
-  sample.counts <- table(sample.chrs)
-
-  
-  # get the sample sequences
-  for(chr in chrs{
-
-    starts <- sample(1:chr.lengths[chr], sample.counts[chr], replace=F)
-    ends <- starts+(nbases-1)
-
-    #this drops all rpt-mask masks, but includes regions with undef seqs.
-    v <- Views(genome[[chr]],starts, ends)
-    #so what do I do with sequences which don't have a 
-
-   }
-
-}
