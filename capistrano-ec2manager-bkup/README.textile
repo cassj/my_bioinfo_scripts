@@ -1,1 +1,0 @@
-h1. capistrano-ec2manager
