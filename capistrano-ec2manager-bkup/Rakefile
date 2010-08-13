@@ -1,0 +1,13 @@
+begin
+  require 'jeweler'
+  Jeweler::Tasks.new do |gemspec|
+    gemspec.name = "capistrano-ec2manager"
+    gemspec.summary = "EC2 recipes for Capistrano"
+    gemspec.description = "EC2 recipes for Capistrano"
+    gemspec.email = "cassjohnston@gmail.com"
+    gemspec.homepage = "http://github.com/cassj/my_bioinfo_scripts/tree/master/capistrano-ec2"
+    gemspec.authors = ["Cass Johnston"]
+  end
+rescue LoadError
+  puts "Jeweler not available. Install it with: gem install jeweler"
+end
