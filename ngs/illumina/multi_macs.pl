@@ -13,7 +13,7 @@ my $genome_size = 2736674344;
 
 #variables:
 my @bandwidth = (100, 200, 300);
-my @mfold = (10,20,30);
+my @mfold = ('10,30');
 my @pvalue = (0.001);
 
 my $count = 1;
