@@ -15,7 +15,7 @@ my $genome_size = 2700000000; #this is the macs default anyway
 
 #variables:
 my @bandwidth = (100, 200, 300);
-my @mfold = ('10,30';
+my @mfold = ('10,30');
 my @pvalue = (0.001);
 
 my $count = 1;
