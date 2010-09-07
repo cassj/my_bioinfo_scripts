@@ -1,0 +1,55 @@
+\documentclass[a4paper]{article}
+\begin{document}
+
+\title{Pre-processing of Mouse E13.5 MGE Illumina Expression Data - Quality Control Checks}
+\author{Matthew Burney, Caroline Johnston}
+
+\maketitle
+
+<<>>=
+library(beadarray)
+
+data <- read.csv("Astro-REST-DN-raw.csv")
+E<-data[,2:9]
+rownames(E) <- data[,1]
+colnames(E) <- c(paste("DN.",1:4, sep=""), paste("EV.",1:4, sep=""))
+@
+
+
+<<>>=
+@ 
+
+
+
+boxplotBeads(BLData.norm, las = 2, outline = FALSE,  ylim = c(4, 12), main = "Foreground")
+for(i in 1:dim(BLData.norm)["nArrays"]){
+  dat<-BLData.norm[[i]][,'G']
+  dat[which(dat<=0)] <- NA
+  dat <- na.omit(dat)
+  if(i==1){
+    plot(density(log2(dat)))
+  }else{
+    lines(density(log2(dat)), col=i)
+  }
+}
+legend("topright", legend=as.character(1:15), fill=1:15)
+
+for(i in 1:15){
+    file=paste("imageplot", i, ".eps", sep="")
+    postscript(file=file, paper="special", width=6, height=6)
+      imageplot(BLData.norm, array = i, log = FALSE, nrow = 20, ncol = 200, what = "G", main = paste(an[i], "G"))
+    dev.off()
+    cat("\\includegraphics{",  gsub('.eps','', file), "}\n\n", sep="")
+    newfile <- gsub('eps','pdf',file)
+    system(paste("ps2pdf", file, newfile))
+}
+
+for(i in 1:15){
+    file=paste("outlierplot", i, ".eps", sep="")
+    postscript(file=file, paper="special", width=6, height=6)
+      outlierPlot(BLData.norm, array = i, log = TRUE, plot = TRUE)
+    dev.off()
+    cat("\\includegraphics{",  gsub('.eps','', file), "}\n\n", sep="")
+}
+
+
