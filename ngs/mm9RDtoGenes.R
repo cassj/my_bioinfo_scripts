@@ -1,9 +1,15 @@
-library(IRanges)
-source("scripts/qw.R")
+#!/usr/bin/Rscript
 
-#call like R --vanilla --args filename=\"thing\"
-args<-commandArgs()
-eval(parse(text=args[grep('filename', args)]))
+options(stringsAsFactors = FALSE);
+
+library(IRanges)
+
+qw <- function(...) {
+  as.character(sys.call()[-1])
+}
+
+args <- commandArgs(trailingOnly=TRUE)
+filename = args[1]
 rd <- get(load(filename))
 
 library(ChIPpeakAnno)
