@@ -7,7 +7,8 @@ args <- commandArgs(trailingOnly=TRUE)
 
 #this should be nearest site to expression (so 1 row for each probe)
 nearest <- get(load(args[1]))
-do.log <- args[2]
+file = args[2]
+do.log <- args[3]
 
 fc <- nearest[,"values.log2FoldChange"]
 pval <- nearest[,"values.pVal"]
@@ -20,7 +21,9 @@ if(!is.na(do.log) && do.log=="log") {
   dist.tss[neg] <- -1*dist.tss[neg] 
 }
 cords <- c(-5000,5000)
-plot(dist.tss, fc, pch=".", xlim=cords)
-inds <- which(pval<=0.001)
-points(dist.tss[inds], fc[inds], col="red", xlim=cords)
 
+postscript(file=file, paper="special", width=6, height=6)
+  plot(dist.tss, fc, pch=".", xlim=cords)
+  inds <- which(pval<=0.001)
+  points(dist.tss[inds], fc[inds], col="red", xlim=cords)
+dev.off()
