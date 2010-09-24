@@ -59,17 +59,23 @@ my $img_file = "img_$chr:$slice_start-$slice_end.png";
 my $img_size = 800;
 
 
+print "TM Threshold (default 63):\n";
+my $tm_threshold = <>;
+chomp $tm_threshold;
+$tm_threshold = 63 unless $tm_threshold =~ /^\d+$/;
 
-my $min_amplicon = 100;
-my $max_amplicon = 150;
-my $upstream_of_tss= 0 ;
-my $downstream_of_tss = 0;
-my $tm_threshold =   70;
+print "Min Amplicon Size (default 80):\n";
+my $min_amplicon = <>;
+chomp $min_amplicon;
+$min_amplicon = 80 unless $min_amplicon =~ /^\d+$/;
+
+print "Max Amplicon Size (default 170):\n";
+my $max_amplicon = <>;
+chomp $max_amplicon;
+$max_amplicon = 170 unless $max_amplicon =~ /^\d+$/;
 
 
-#Diogo's strict parameters
 my %primer3_params = (
-#		      PRIMER_MISPRIMING_LIBRARY => '/home/cassj/work/primer_design/BuckleyPrimer/repbase/rodrep.ref',
                       PRIMER_OPT_GC_PERCENT     => 60,
                       PRIMER_MIN_GC             => 30,
                       PRIMER_MAX_GC             => 80,
@@ -87,37 +93,10 @@ my %primer3_params = (
                       PRIMER_SALT_CONC          => 50,
                       PRIMER_MAX_TM             => 60,
                       PRIMER_SELF_END           => 2,
-                      PRIMER_MAX_DIFF_TM        => 5,
+                      PRIMER_MAX_DIFF_TM        => 1,
                       PRIMER_MAX_SIZE           => 27,
                       PRIMER_NUM_RETURN         => 10
                      );
-
-
-# set params as per Manu's protocol:
-#my %primer3_params = (
-#		      PRIMER_MISPRIMING_LIBRARY => 'repbase/humrep.ref',
-#		      PRIMER_OPT_GC_PERCENT     => 60,
-#		      PRIMER_MIN_GC             => 40,
-#		      PRIMER_MAX_GC             => 80,
-#		      PRIMER_PRODUCT_OPT_SIZE   => 120,
-#		      PRIMER_PRODUCT_SIZE_RANGE => "$min_amplicon - $max_amplicon",
-#		      PRIMER_OPT_SIZE           => 20,
-#		      PRIMER_MIN_SIZE           => 18,
-#		      PRIMER_MAX_MISPRIMING     => 12,
-#		      PRIMER_MIN_TM             => 57,
-#		      PRIMER_SELF_ANY           => 4,
-#		      PRIMER_GC_CLAMP           => 0,
-#		      PRIMER_NUM_NS_ACCEPTED    => 0,
-#		      PRIMER_OPT_TM             => 60,
-#		      PRIMER_MAX_POLY_X         => 5,
-#		      PRIMER_SALT_CONC          => 50,
-#		      PRIMER_MAX_TM             => 63,
-#		      PRIMER_SELF_END           => 3,
-#		      PRIMER_MAX_DIFF_TM        => 100,
-#		      PRIMER_MAX_SIZE           => 27,
-#		      PRIMER_NUM_RETURN         => 10
-#		     );
-
 
 
 
@@ -431,19 +410,5 @@ print REPORT "Right primer Mfold Tm: ".$best_primer->mfe_right_primer->Tm->{60}.
 print REPORT "Right primer Mfold dG: ".$best_primer->mfe_right_primer->dG->{60}."\n";
 
 
-#if ($run_blast){
-#  my $left = $best_primer->blast_left_primer(run=>1,%blast_params);
-#  my $right = $best_primer->blast_right_primer(run=>1,%blast_params);
-#  
-#  print REPORT "Left primer BLAST results:\n\t".$best_primer->left_blast_rid."\n";
-#  print REPORT "Right primer BLAST results: \n\t".$best_primer->right_blast_rid."\n";
-#  
-# # #check for problems (not implemented yet)
-#  # warn "CONFLICT WARNING: Both primers hit the same non-target site" if 
-#  #   $node->blast_conflicts;
-#  #
-#  #  die;
-#}
-#
 close REPORT or die "Can't close report file $report_file";
 

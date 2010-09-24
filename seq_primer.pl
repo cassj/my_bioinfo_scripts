@@ -40,63 +40,44 @@ print "Enter the species:\n";
 my $species = <>;
 chomp $species;
 
+print "TM Threshold (default 63):\n";
+my $tm_threshold = <>;
+chomp $tm_threshold;
+$tm_threshold = 63 unless $tm_threshold =~ /^\d+$/;
 
-my $min_amplicon = 80;
-my $max_amplicon = 200;
-my $tm_threshold = 70;
+print "Min Amplicon Size (default 80):\n";
+my $min_amplicon = <>;
+chomp $min_amplicon;
+$min_amplicon = 80 unless $min_amplicon =~ /^\d+$/;
+
+print "Max Amplicon Size (default 170):\n";
+my $max_amplicon = <>;
+chomp $max_amplicon;
+$max_amplicon = 170 unless $max_amplicon =~ /^\d+$/;
 
 
-# set params as per Manu's protocol:
-# Apparently these are already quite lenient.
-
-#my %primer3_params = (
-#		      PRIMER_OPT_GC_PERCENT     => 60,
-#		      PRIMER_MIN_GC             => 40,
-#		      PRIMER_MAX_GC             => 80,
-#		      PRIMER_PRODUCT_OPT_SIZE   => 120,
-#		      PRIMER_PRODUCT_SIZE_RANGE => $min_amplicon.'-'.$max_amplicon,
-#		      PRIMER_OPT_SIZE           => 20,
-#		      PRIMER_MIN_SIZE           => 18,
-#		      PRIMER_MAX_MISPRIMING     => 12,
-#		      PRIMER_MIN_TM             => 57,
-#		      PRIMER_SELF_ANY           => 4,
-#		      PRIMER_GC_CLAMP           => 0,
-#		      PRIMER_NUM_NS_ACCEPTED    => 0,
-#		      PRIMER_OPT_TM             => 60,
-#		      PRIMER_MAX_POLY_X         => 5,
-#		      PRIMER_SALT_CONC          => 50,
-#		      PRIMER_MAX_TM             => 63,
-#		      PRIMER_SELF_END           => 3,
-#		      PRIMER_MAX_DIFF_TM        => 100,
-#		      PRIMER_MAX_SIZE           => 27,
-#		      PRIMER_NUM_RETURN         => 5
-#		     );
-#
-
-#Diogo's strict parameters
 my %primer3_params = (
-		      PRIMER_OPT_GC_PERCENT     => 60,
-		      PRIMER_MIN_GC             => 30,
-		      PRIMER_MAX_GC             => 80,
-		      PRIMER_PRODUCT_OPT_SIZE   => 120,
-		      PRIMER_PRODUCT_SIZE_RANGE => "$min_amplicon - $max_amplicon",
-		      PRIMER_OPT_SIZE           => 20,
-		      PRIMER_MIN_SIZE           => 18,
-		      PRIMER_MAX_MISPRIMING     => 12,
-		      PRIMER_MIN_TM             => 58,
-		      PRIMER_SELF_ANY           => 4,
-		      PRIMER_GC_CLAMP           => 0,
-		      PRIMER_NUM_NS_ACCEPTED    => 0,
-		      PRIMER_OPT_TM             => 59,
-		      PRIMER_MAX_POLY_X         => 5,
-		      PRIMER_SALT_CONC          => 50,
-		      PRIMER_MAX_TM             => 60,
-		      PRIMER_SELF_END           => 2,
-		      PRIMER_MAX_DIFF_TM        => 2,
-		      PRIMER_MAX_SIZE           => 27,
-		      PRIMER_NUM_RETURN         => 20
-		     );
-
+                      PRIMER_OPT_GC_PERCENT     => 60,
+                      PRIMER_MIN_GC             => 30,
+                      PRIMER_MAX_GC             => 80,
+                      PRIMER_PRODUCT_OPT_SIZE   => 120,
+                      PRIMER_PRODUCT_SIZE_RANGE => "$min_amplicon - $max_amplicon",
+                      PRIMER_OPT_SIZE           => 20,
+                      PRIMER_MIN_SIZE           => 18,
+                      PRIMER_MAX_MISPRIMING     => 12,
+                      PRIMER_MIN_TM             => 58,
+                      PRIMER_SELF_ANY           => 4,
+                      PRIMER_GC_CLAMP           => 0,
+                      PRIMER_NUM_NS_ACCEPTED    => 0,
+                      PRIMER_OPT_TM             => 59,
+                      PRIMER_MAX_POLY_X         => 5,
+                      PRIMER_SALT_CONC          => 50,
+                      PRIMER_MAX_TM             => 60,
+                      PRIMER_SELF_END           => 2,
+                      PRIMER_MAX_DIFF_TM        => 1,
+                      PRIMER_MAX_SIZE           => 27,
+                      PRIMER_NUM_RETURN         => 10
+                     );
 
 
 
@@ -124,6 +105,18 @@ open REPORT, ">$report_file"
   or die "Can't open file $report_file for writing";
 
 
+# print settings
+print REPORT "Primer design to given sequence \n\n";
+print REPORT "Species: $species\n";
+print REPORT "TM Threshold: $tm_threshold\n";
+
+print REPORT "\nPrimer3 Paramters:\n";
+print REPORT Dumper \%primer3_params;
+print REPORT "\nUNAFold Parameters\n";
+print REPORT Dumper \%mfe_params;
+print REPORT "\nRepeatMasker Parameters\n";
+print REPORT Dumper \@rm_params;
+print REPORT "\n\n";
 
 
 print "Please enter your sequence:\n";
@@ -222,8 +215,8 @@ if ($primer3_res->number_of_results){
       print REPORT "\tLeft Tm: ".$this_res->mfe_left_primer->Tm->{60}."\n";
       print REPORT "\t".$this_res->{right_primer}->seq->seq."\n";
       print REPORT "\tRight Tm: ".$this_res->mfe_right_primer->Tm->{60}."\n";
-      print REPORT "\t".$this_res->amplicon->seq."\n\n";
-      print REPORT "\tAmplicon Tm: ".$this_res->mfe_amplicon->Tm->{60}."\n";
+      print REPORT "\t".$this_res->amplicon->seq."\n";
+      print REPORT "\tAmplicon Tm: ".$this_res->mfe_amplicon->Tm->{60}."\n\n";
     }
     else{
       #give up and move on to the next one.

@@ -33,6 +33,7 @@ use Bio::Tools::Run::RepeatMasker;
 use Bio::Seq::PrimedSeq::Plus;
 use Bio::Graphics;
 
+use Data::Dumper;
 
 #sort the args out, this is stupid. 
 
@@ -64,12 +65,12 @@ $tm_threshold = 63 unless $tm_threshold =~ /^\d+$/;
 print "Min Amplicon Size (default 80):\n";
 my $min_amplicon = <>;
 chomp $min_amplicon;
-$min_amplicon = 63 unless $min_amplicon =~ /^\d+$/;
+$min_amplicon = 80 unless $min_amplicon =~ /^\d+$/;
 
 print "Max Amplicon Size (default 170):\n";
 my $max_amplicon = <>;
 chomp $max_amplicon;
-$max_amplicon = 63 unless $max_amplicon =~ /^\d+$/;
+$max_amplicon = 170 unless $max_amplicon =~ /^\d+$/;
 
 my $img_size = 800;
 
@@ -91,7 +92,7 @@ my %primer3_params = (
                       PRIMER_SALT_CONC          => 50,
                       PRIMER_MAX_TM             => 60,
                       PRIMER_SELF_END           => 2,
-                      PRIMER_MAX_DIFF_TM        => 2,
+                      PRIMER_MAX_DIFF_TM        => 1,
                       PRIMER_MAX_SIZE           => 27,
                       PRIMER_NUM_RETURN         => 10
                      );
@@ -194,6 +195,21 @@ open REPORT, ">$report_file"
   or die "Can't open file $report_file for writing";
 
 print REPORT "Primer design for $identifier\n";
+
+# print settings
+print REPORT "\n";
+print REPORT "Species: $species\n";
+print REPORT "Upstream of TSS: $upstream_of_tss\n";
+print REPORT "Downstream of TSS: $downstream_of_tss\n";
+print REPORT "TM Threshold: $tm_threshold\n";
+
+print REPORT "\nPrimer3 Paramters:\n";
+print REPORT Dumper \%primer3_params;
+print REPORT "\nUNAFold Parameters\n";
+print REPORT Dumper \%mfe_params;
+print REPORT "\nRepeatMasker Parameters\n";
+print REPORT Dumper \@rm_params;
+print REPORT "\n\n";
 
 # print some info about the gene
 print REPORT 'Gene: '.$gene->display_id.' '.$gene->description."retrieved from Ensembl $species database\n" ;

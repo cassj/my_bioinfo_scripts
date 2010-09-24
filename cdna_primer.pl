@@ -46,64 +46,47 @@ my $identifier = <>;
 chomp $identifier;
 
 
-my $min_amplicon = 90;
-my $max_amplicon = 200;
-my $tm_threshold = 65;
+print "TM Threshold (default 63):\n";
+my $tm_threshold = <>;
+chomp $tm_threshold;
+$tm_threshold = 63 unless $tm_threshold =~ /^\d+$/;
 
+print "Min Amplicon Size (default 80):\n";
+my $min_amplicon = <>;
+chomp $min_amplicon;
+$min_amplicon = 80 unless $min_amplicon =~ /^\d+$/;
 
-# set params as per Manu's protocol:
-# Apparently these are already quite lenient.
-
-#my %primer3_params = (
-#		      PRIMER_OPT_GC_PERCENT     => 60,
-#		      PRIMER_MIN_GC             => 40,
-#		      PRIMER_MAX_GC             => 80,
-#		      PRIMER_PRODUCT_OPT_SIZE   => 120,
-#		      PRIMER_PRODUCT_SIZE_RANGE => $min_amplicon.'-'.$max_amplicon,
-#		      PRIMER_OPT_SIZE           => 20,
-#		      PRIMER_MIN_SIZE           => 18,
-#		      PRIMER_MAX_MISPRIMING     => 12,
-#		      PRIMER_MIN_TM             => 57,
-#		      PRIMER_SELF_ANY           => 4,
-#		      PRIMER_GC_CLAMP           => 0,
-#		      PRIMER_NUM_NS_ACCEPTED    => 0,
-#		      PRIMER_OPT_TM             => 60,
-#		      PRIMER_MAX_POLY_X         => 5,
-#		      PRIMER_SALT_CONC          => 50,
-#		      PRIMER_MAX_TM             => 63,
-#		      PRIMER_SELF_END           => 3,
-#		      PRIMER_MAX_DIFF_TM        => 100,
-#		      PRIMER_MAX_SIZE           => 27,
-#		      PRIMER_NUM_RETURN         => 5
-#		     );
-#
+print "Max Amplicon Size (default 170):\n";
+my $max_amplicon = <>;
+chomp $max_amplicon;
+$max_amplicon = 170 unless $max_amplicon =~ /^\d+$/;
 
 
 
-#Diogo's strict parameters
+
+
 my %primer3_params = (
-		      PRIMER_OPT_GC_PERCENT     => 60,
-		      PRIMER_MIN_GC             => 30,
-		      PRIMER_MAX_GC             => 80,
-		      PRIMER_PRODUCT_OPT_SIZE   => 120,
-		      PRIMER_PRODUCT_SIZE_RANGE => "$min_amplicon - $max_amplicon",
-		      PRIMER_OPT_SIZE           => 20,
-		      PRIMER_MIN_SIZE           => 18,
-		      PRIMER_MAX_MISPRIMING     => 12,
-		      PRIMER_MIN_TM             => 58,
-		      PRIMER_SELF_ANY           => 4,
-		      PRIMER_GC_CLAMP           => 0,
-		      PRIMER_NUM_NS_ACCEPTED    => 0,
-		      PRIMER_OPT_TM             => 59,
-		      PRIMER_MAX_POLY_X         => 5,
-		      PRIMER_SALT_CONC          => 50,
-		      PRIMER_MAX_TM             => 60,
-		      PRIMER_SELF_END           => 2,
-		      PRIMER_MAX_DIFF_TM        => 2,
-		      PRIMER_MAX_SIZE           => 27,
-		      PRIMER_NUM_RETURN         => 20
-		     );
-
+                      PRIMER_OPT_GC_PERCENT     => 60,
+                      PRIMER_MIN_GC             => 30,
+                      PRIMER_MAX_GC             => 80,
+                      PRIMER_PRODUCT_OPT_SIZE   => 120,
+                      PRIMER_PRODUCT_SIZE_RANGE => "$min_amplicon - $max_amplicon",
+                      PRIMER_OPT_SIZE           => 20,
+                      PRIMER_MIN_SIZE           => 18,
+                      PRIMER_MAX_MISPRIMING     => 12,
+                      PRIMER_MIN_TM             => 58,
+                      PRIMER_SELF_ANY           => 4,
+                      PRIMER_GC_CLAMP           => 0,
+                      PRIMER_NUM_NS_ACCEPTED    => 0,
+                      PRIMER_OPT_TM             => 59,
+                      PRIMER_MAX_POLY_X         => 5,
+                      PRIMER_SALT_CONC          => 50,
+                      PRIMER_MAX_TM             => 60,
+                      PRIMER_SELF_END           => 2,
+                      PRIMER_MAX_DIFF_TM        => 1,
+                      PRIMER_MAX_SIZE           => 27,
+                      PRIMER_NUM_RETURN         => 10
+                     );
 
 
 

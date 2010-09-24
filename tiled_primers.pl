@@ -52,58 +52,85 @@ my $identifier = <>;
 chomp $identifier;
 
 #my $identifier = 'ENSMUSG00000043969'; # mouse Emx2
-
 #my $species = 'human';
 #my $identifier = 'ENSG00000189056'; #human reelin
 #my $identifier = 'ENSG00000077782'; #human fgfr1
 #my $species = 'mouse';
 #my $identifier='ENSMUSG00000037771 '; #mouse VIAAT
 
-my $window_shift = 50;
-my $window_size = 200;
-my $min_amplicon = 90;
-my $max_amplicon = 150;
-my $min_inter_amplicon = 400;
-my $max_inter_amplicon = 600;
-my $upstream_of_tss= 1000;
-my $downstream_of_tss = 1000;
-my $tm_threshold = 63;
+print "TM Threshold (default 63):\n";
+my $tm_threshold = <>;
+chomp $tm_threshold;
+$tm_threshold = 63 unless $tm_threshold =~ /^\d+$/;
+
+print "Min Amplicon Size (default 80):\n";
+my $min_amplicon = <>;
+chomp $min_amplicon;
+$min_amplicon = 80 unless $min_amplicon =~ /^\d+$/;
+
+print "Max Amplicon Size (default 170):\n";
+my $max_amplicon = <>;
+chomp $max_amplicon;
+$max_amplicon = 170 unless $max_amplicon =~ /^\d+$/;
 
 
-my $opt_inter_amplicon = 300;
-#$min_inter_amplicon + ($max_inter_amplicon-$min_inter_amplicon)/2 ;
+print "Min inter-amplicon distance (default 100):\n";
+my $min_inter_amplicon = <>;
+chomp $min_inter_amplicon;
+$min_inter_amplicon = 100 unless $min_inter_amplicon =~ /^\d+$/;
 
+print "Max inter-amplicon distance (default 600):\n";
+my $max_inter_amplicon = <>;
+chomp $max_inter_amplicon;
+$max_inter_amplicon = 600 unless $max_inter_amplicon =~ /^\d+$/;
 
+print "Optimal inter-amplicon distance (default 300):\n";
+my $opt_inter_amplicon = <>;
+chomp $opt_inter_amplicon;
+$opt_inter_amplicon = 300 unless $opt_inter_amplicon =~ /^\d+$/;
 
-# set params as per Manu's protocol:
-# Apparently these are already quite lenient.
+print "Distance upstream of TSS:\n";
+my $upstream_of_tss= <>;
+chomp $upstream_of_tss;
+
+print "Distance downstream of TSS:\n";
+my $downstream_of_tss = <>;
+chomp $downstream_of_tss;
+
+print "Window shift (default 50):\n";
+my $window_shift = <>;
+chomp $window_shift;
+$window_shift = 50 unless $window_shift =~ /^\d+$/;
+
+print "Window size (default 200):\n";
+my $window_size = <>;
+chomp $window_size;
+$window_size = 200 unless $window_size =~ /^\d+$/;
+
 
 
 my %primer3_params = (
-		      PRIMER_OPT_GC_PERCENT     => 60,
-		      PRIMER_MIN_GC             => 40,
-		      PRIMER_MAX_GC             => 80,
-		      PRIMER_PRODUCT_OPT_SIZE   => 120,
-		      PRIMER_PRODUCT_SIZE_RANGE => '50-200',
-
-		      PRIMER_OPT_SIZE           => 20,
-		      PRIMER_MIN_SIZE           => 18,
-		      PRIMER_MAX_MISPRIMING     => 12,
-		      PRIMER_MIN_TM             => 57,
-		      PRIMER_SELF_ANY           => 4,
-		      PRIMER_GC_CLAMP           => 0,
-		      PRIMER_NUM_NS_ACCEPTED    => 0,
-		      PRIMER_OPT_TM             => 60,
-		      PRIMER_MAX_POLY_X         => 5,
-		      PRIMER_SALT_CONC          => 50,
-#		      PRIMER_OUTSIDE_PENALTY    => 0,
-		      PRIMER_MAX_TM             => 63,
-		      PRIMER_SELF_END           => 3,
-		      PRIMER_MAX_DIFF_TM        => 100,
-		      PRIMER_MAX_SIZE           => 27,
-		      PRIMER_NUM_RETURN         => 10
-		     );
-
+                      PRIMER_OPT_GC_PERCENT     => 60,
+                      PRIMER_MIN_GC             => 30,
+                      PRIMER_MAX_GC             => 80,
+                      PRIMER_PRODUCT_OPT_SIZE   => 120,
+                      PRIMER_PRODUCT_SIZE_RANGE => "$min_amplicon - $max_amplicon",
+                      PRIMER_OPT_SIZE           => 20,
+                      PRIMER_MIN_SIZE           => 18,
+                      PRIMER_MAX_MISPRIMING     => 12,
+                      PRIMER_MIN_TM             => 58,
+                      PRIMER_SELF_ANY           => 4,
+                      PRIMER_GC_CLAMP           => 0,
+                      PRIMER_NUM_NS_ACCEPTED    => 0,
+                      PRIMER_OPT_TM             => 59,
+                      PRIMER_MAX_POLY_X         => 5,
+                      PRIMER_SALT_CONC          => 50,
+                      PRIMER_MAX_TM             => 60,
+                      PRIMER_SELF_END           => 2,
+                      PRIMER_MAX_DIFF_TM        => 1,
+                      PRIMER_MAX_SIZE           => 27,
+                      PRIMER_NUM_RETURN         => 10
+                     );
 
 #Again, as per Manu's protocol
 my %mfe_params = (
