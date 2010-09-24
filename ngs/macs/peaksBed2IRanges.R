@@ -1,9 +1,14 @@
-source("scripts/qw.R")
+#!/usr/bin/Rscript
+
 library(IRanges)
 
-#call like R --vanilla --args filename=\"thing\"
-args<-commandArgs()
-eval(parse(text=args[grep('filename', args)]))
+qw <- function(...) {
+  as.character(sys.call()[-1])
+}
+
+args <- commandArgs(trailingOnly=TRUE)
+
+filename = args[1]
 
 skip <- 17
 if( length(grep('negative', filename))>0 ){
