@@ -14,16 +14,16 @@ args <- commandArgs(trailingOnly=TRUE)
 filename = args[1]
 
 data.annot <- get(load(filename))
+#turn it into a data.frame
+data<-as.data.frame(data.annot)
+#sort by pval
+data <- data[order(data$values.neg10log10pVal, decreasing=T),]
 
 number <- args[2]
 if (number =="all") number <-nrow(data)
 
 n<-min(nrow(data), number)
 
-#turn it into a data.frame
-data<-as.data.frame(data.annot)
-#sort by pval
-data <- data[order(data$values.neg10log10pVal, decreasing=T),]
 #just take top n
 data<-data[1:n,]
 #and remake into RD
