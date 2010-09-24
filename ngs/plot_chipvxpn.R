@@ -9,7 +9,7 @@ args <- commandArgs(trailingOnly=TRUE)
 nearest <- get(load(args[1]))
 file = args[2]
 do.log <- args[3]
-xrange <- args[4]
+xrange <- as.numeric(args[4])
 
 fc <- nearest[,"values.log2FoldChange"]
 pval <- nearest[,"values.pVal"]
