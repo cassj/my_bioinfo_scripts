@@ -8,7 +8,7 @@ qw <- function(...) {
   as.character(sys.call()[-1])
 }
 
-args<-commandArgs()
+args <- commandArgs(trailingOnly=TRUE)
 filename = args[1]
 
 data <- read.csv(filename, header=T, sep="\t", comment.char = "#")
