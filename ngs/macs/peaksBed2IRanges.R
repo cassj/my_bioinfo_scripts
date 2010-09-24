@@ -11,11 +11,6 @@ qw <- function(...) {
 args<-commandArgs()
 filename = args[1]
 
-skip <- 17
-if( length(grep('negative', filename))>0 ){
- skip <- 0
-}
-
 data <- read.csv(filename, header=T, sep="\t", comment.char = "#")
 
 colnames(data) <- qw(Chr, Start, End, Length, Summit, nTags, neg10log10pVal, FoldEnrichment)
