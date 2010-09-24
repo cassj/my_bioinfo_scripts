@@ -1,16 +1,22 @@
+#!/usr/bin/Rscript
+
+options(stringsAsFactors = FALSE);
+
 library(IRanges)
 library(BSgenome.Mmusculus.UCSC.mm9)
 library(ChIPpeakAnno)
 
-#call like R --vanilla --args filename=\"thing\" number=10000
-args<-commandArgs()
+qw <- function(...) {
+  as.character(sys.call()[-1])
+}
 
-#retrieve the filename from the command line.
-#Note that we're just eval'ing whatever the user supplies.
-eval(parse(text=args[grep('filename', args)]))
+args <- commandArgs(trailingOnly=TRUE)
+filename = args[1]
+
 data.annot <- get(load(filename))
 
-eval(parse(text=args[grep('number', args)]))
+number <- args[2]
+if (number =="all") number <-nrow(data)
 
 n<-min(nrow(data), number)
 
