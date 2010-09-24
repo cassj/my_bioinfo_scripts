@@ -9,6 +9,7 @@ args <- commandArgs(trailingOnly=TRUE)
 nearest <- get(load(args[1]))
 file = args[2]
 do.log <- args[3]
+xrange <- args[4]
 
 fc <- nearest[,"values.log2FoldChange"]
 pval <- nearest[,"values.pVal"]
@@ -20,7 +21,10 @@ if(!is.na(do.log) && do.log=="log") {
   dist.tss <- log(dist.tss)
   dist.tss[neg] <- -1*dist.tss[neg] 
 }
-cords <- c(-5000,5000)
+cords <- range(dist.tss)
+if(!is.na(xrange)){
+  cords <- c((-1*xrange),xrange)
+}
 
 postscript(file=file, paper="special", width=6, height=6)
   plot(dist.tss, fc, pch=".", xlim=cords)
