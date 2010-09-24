@@ -66,6 +66,10 @@ data <- RangedData(ranges = IRanges(
                    values = data[,values]
                    )
 
-newfile<-sub("peaks", "peaksWithSeqs", filename)
+data.df<-as.data.frame(data)
 
+newfile<-sub("peaks", "peaksWithSeqs", filename)
 save(data, file=newfile)
+
+newfile<-sub(".R$",".csv",newfile)
+write.csv(data.df, file=newfile)
