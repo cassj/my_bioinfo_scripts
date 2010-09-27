@@ -5,6 +5,10 @@ library(IRanges)
 options(stringsAsFactors = FALSE);
 args <- commandArgs(trailingOnly=TRUE)
 
+#for testing - why are the distances in bins?
+restchip = '../RESTChIP/Macs/NA_peaksWithSeqs.AnnoRangedData.R'
+xdnvev = '../XDNvEV/results/expression_data/AnnoRangedData_Limma.R'
+ 
 query <- get(load(args[1]))
 subject <-  get(load(args[2]))
 
@@ -24,12 +28,23 @@ nearest.rd <- function(query, subject ){
     q.iranges <- unlist(ranges(query[sp]))
     s.iranges <- unlist(ranges(subject[sp]))
 
+   #nearest returns a integer vector containing the index of the 
+   #nearest neightbour range in ‘subject’ for each range in ‘x’.
     inds <- nearest(q.iranges, s.iranges)
-    nr <-  as.data.frame(subject[sp][inds,])
+    
+    #retrieve the info about nearest seqs
+    nr <-  as.data.frame(subject[sp])[inds,]
     rownames(nr) <- sub(paste("^",sp,".",sep=""),'',names(q.iranges))
     colnames(nr) <- paste("nearest.", colnames(nr), sep="") 
-    qy <- as.data.frame(query[sp])
-    res[[sp]] <- cbind(qy, nr)
+    this.res <- cbind(as.data.frame(query[sp]),nr)
+
+    #work out what the actual distance is between them and
+    #keep only the cols we actually need.
+    #this would be much easier in a database.
+    cols.to.keep<-c("space", "start", "end" , "width", grep("^values.+", colnames(this.res), value=T), "nearest.start","nearest.end", "nearest.width", "nearest.values.AveExpr", "nearest.values.pVal", "nearest.values.log2FoldChange", "nearest.values.Symbols","nearest.values.mgi_symbol", "nearest.values.description" )
+    this.res <- this.res[,cols.to.keep]
+    
+    res[[sp]] <- this.res
   }
   return(res)  
 }

@@ -31,3 +31,5 @@ postscript(file=file, paper="special", width=6, height=6)
   inds <- which(pval<=0.001)
   points(dist.tss[inds], fc[inds], col="red", xlim=cords)
 dev.off()
+
+
