@@ -5,10 +5,6 @@ library(IRanges)
 options(stringsAsFactors = FALSE);
 args <- commandArgs(trailingOnly=TRUE)
 
-#for testing - why are the distances in bins?
-#restchip = '../RESTChIP/Macs/NA_peaksWithSeqs.AnnoRangedData.R'
-#xdnvev = '../XDNvEV/results/expression_data/AnnoRangedData_Limma.R'
- 
 query <- get(load(args[1]))
 subject <-  get(load(args[2]))
 

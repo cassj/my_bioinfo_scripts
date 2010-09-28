@@ -5,10 +5,6 @@ library(IRanges)
 options(stringsAsFactors = FALSE);
 args <- commandArgs(trailingOnly=TRUE)
 
-#for testing - why are the distances in bins?
-restchip = '../RESTChIP/Macs/NA_peaksWithSeqs.AnnoRangedData.R'
-xdnvev = '../XDNvEV/results/expression_data/AnnoRangedData_Limma.R'
- 
 query <- get(load(args[1]))
 subject <-  get(load(args[2]))
 
@@ -38,11 +34,16 @@ nearest.rd <- function(query, subject ){
     colnames(nr) <- paste("nearest.", colnames(nr), sep="") 
     this.res <- cbind(as.data.frame(query[sp]),nr)
 
-    #work out what the actual distance is between them and
-    #keep only the cols we actually need.
-    #this would be much easier in a database.
-    cols.to.keep<-c("space", "start", "end" , "width", grep("^values.+", colnames(this.res), value=T), "nearest.start","nearest.end", "nearest.width", "nearest.values.AveExpr", "nearest.values.pVal", "nearest.values.log2FoldChange", "nearest.values.Symbols","nearest.values.mgi_symbol", "nearest.values.description" )
-    this.res <- this.res[,cols.to.keep]
+    #calculate the distance between the tss of the probe target and
+    #the middle of the binding site.
+    mid.bs <- apply(this.res[,c("start", "end")],1,mean)
+    mid.bs <- round(mid.bs)
+    genestart<-this.res[,"nearest.values.start_position"]
+    inds <- which(this.res[,"nearest.values.strand"]==-1)
+    genestart[inds] <- this.res[inds,"nearest.values.end_position"]
+    dist.to.bindingsite <- mid.bs - genestart
+
+    this.res <- cbind(dist.to.bindingsite,this.res)
     
     res[[sp]] <- this.res
   }
