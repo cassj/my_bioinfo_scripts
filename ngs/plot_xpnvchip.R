@@ -13,7 +13,7 @@ fc <- nearest[,"nearest.values.log2FoldChange"]
 pval <- nearest[,"nearest.values.pVal"]
 dist.tss <- nearest[,"dist.to.bindingsite"]
 
-pval.cut <- 0.0001
+pval.cut <- 0.001
 do.plot <- function(file, xrange=NA ){
   postscript(file=file, paper="special", width=6, height=6)
 
