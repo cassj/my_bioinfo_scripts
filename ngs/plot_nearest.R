@@ -15,135 +15,125 @@ args <- commandArgs(trailingOnly=TRUE)
 filename = args[1]
 dat <- read.csv(filename)
 
-d <- dat$distancetoFeature
+
+
+#plot for all and then seperately by type
+types <- unique(dat[,"type"])
+if(length(types)>1){types <- c("all",types)}
+
+for (ty in types){
+  if(ty=="all"){
+    this.dat <- dat
+  }else{
+    this.dat <- dat[dat[,"type"]==ty,]
+  }
+  i <-  this.dat$insideFeature
+  overlapping.transcript <- i == "inside" | i == "overlapStart" | i == "overlapEnd" | i=="includeFeature"
+  exonic <- this.dat$overlapping.exon == 1
+  intronic <- overlapping.transcript &! exonic
   
-n.upstream <- sum(d >= 0)
-n.downstream <- sum(d < 0)
-
-
-#classify your peaks:
-
-i <-  dat$insideFeature
-overlapping.transcript <- i == "inside" | i == "overlapStart" | i == "overlapEnd" | i=="includeFeature"
-exonic <- dat$overlapping.exon == 1
-intronic <- overlapping.transcript &! exonic
-
-# we still have a few cases where things are "exonic" but not overlapping the transcript they
-# are closest to. It's because we're measuring closest by TSS/TES to mid peak. peak itself might
-# actually lie in an exon of a gene on the opp strand, or in an exon of an upstream gene.
-
-test <- cbind(overlapping.transcript, exonic, intronic) 
-test <- which(apply(test, 1,sum)==1)
-
-# So, unflag "exonic" because, relative to the closest tss, it isn't, but add a note to say that
-# there's a problem
-other.exonic = rep(0, nrow(dat))
-other.exonic[test] <- 1
-exonic[test] <- 0
-
-#so now this is true:
-#sum(exonic, intronic) == sum(overlapping.transcript)
-
-# what is in a transcript, what isn't?
-nms <- c( sum(overlapping.transcript),
-          nrow(dat)-sum(overlapping.transcript))
-
-labels <-  c(paste("overlapping gene (", sum(overlapping.transcript) ,")", sep=""),
-               paste("not overlapping gene (",nrow(dat)-sum(overlapping.transcript) ,")", sep=""))
-
-my.cols <- colors()[c(5,2)]
-title = ""
-
-p.file <- sub('.csv$','_ingenes_pie.ps', filename)
-postscript(p.file)
-pie(nms,labels=labels, col=my.cols, main=title) 
-dev.off()
-
-p.file <- sub('.csv$','_ingenes_box.ps', filename)
-postscript(p.file)
-barplot(nms, names.arg=labels, col=my.cols, main=title)
-dev.off()
-
-
-# of stuff in a gene region, what's exonic, what's intronic? (with reference to the nearest gene, so
-# stuff annotate as not-in-a-gene could still be in the exon/intron of another gene)
-nms <- c( sum(exonic),
-          sum(intronic))
-
-labels <-  c(paste("exonic (", sum(exonic) ,")", sep=""),
+  test <- cbind(overlapping.transcript, exonic, intronic) 
+  test <- which(apply(test, 1,sum)==1)
+  other.exonic = rep(0, nrow(this.dat))
+  other.exonic[test] <- 1
+  exonic[test] <- 0
+  
+  nms <- c( sum(overlapping.transcript),
+           nrow(this.dat)-sum(overlapping.transcript))
+  
+  labels <-  c(paste("overlapping gene (", sum(overlapping.transcript) ,")", sep=""),
+               paste("not overlapping gene (",nrow(this.dat)-sum(overlapping.transcript) ,")", sep=""))
+  
+  my.cols <- colors()[c(5,2)]
+  title = ""
+  
+  p.file <- sub('.csv$',paste('_',ty,'_ingenes_pie.ps', sep=""), filename)
+  postscript(p.file)
+  pie(nms,labels=labels, col=my.cols, main=title) 
+  dev.off()
+  
+  p.file <- sub('.csv$',paste('_',ty,'_ingenes_box.ps', sep=""), filename)
+  postscript(p.file)
+  barplot(nms, names.arg=labels, col=my.cols, main=title)
+  dev.off()
+  
+  
+                                        # of stuff in a gene region, what's exonic, what's intronic? (with reference to the nearest gene, so
+                                        # stuff annotate as not-in-a-gene could still be in the exon/intron of another gene)
+  nms <- c( sum(exonic),
+           sum(intronic))
+  
+  labels <-  c(paste("exonic (", sum(exonic) ,")", sep=""),
                paste("intronic (",sum(intronic) ,")", sep=""))
-
-my.cols <- colors()[c(5,2)]
-title = ""
-
-p.file <- sub('.csv$','_exonintron_pie.ps', filename)
-postscript(p.file)
-pie(nms,labels=labels, col=my.cols, main=title)
-dev.off()
-
-p.file <- sub('.csv$','_exonintron_box.ps', filename)
-postscript(p.file)
-barplot(nms, names.arg=labels, col=my.cols, main=title)
-dev.off()
-
-
-#density distributions and such
-ad <- abs(d)
-
-p.file <- sub('.csv$','_densitydist.ps', filename)
-postscript(p.file)
-plot(density(d), main="Density Distribution of Distances to Nearest Peak")
-dev.off()
-
-p.file <- sub('.csv$','_densitydist_within100k.ps', filename)
-postscript(p.file)
-plot(density(d[ad<100000]), main="Density Distribution of Distances to Nearest Peak (within 100kb")
-dev.off()
-
-
-
-p.file <- sub('.csv$','_distvFoldEnrich.ps', filename)
-postscript(p.file)
-plot(d, dat[,"FoldEnrichment"], pch="+", main="FoldEnrichment vs Distance to Nearest Peak")
-dev.off()
-
-p.file <- sub('.csv$','_distvFoldEnrich_within100k.ps', filename)
-postscript(p.file)
-plot(d[ad<100000], dat[(ad<100000),"FoldEnrichment"], pch="+", main="FoldEnrichment vs Distance to Nearest Peak")
-dev.off()
-
-
-
-p.file <- sub('.csv$','_neg10log10pVal.ps', filename)
-postscript(p.file)
-plot(d, dat[,"neg10log10pVal"], pch="+", main="-10log10p.val vs Distance to Nearest Peak")
-dev.off()
-
-p.file <- sub('.csv$','_neg10log10pVal_within100k.ps', filename)
-postscript(p.file)
-plot(d[ad<100000], dat[(ad<100000),"neg10log10pVal"], pch="+", main="-10log10p.val vs Distance to Nearest Peak")
-dev.off()
-
-
-
-#because apparently everyone loves an uninformative pie chart:
-within.1kb <- (ad < 1000)
-between.1kb.and.5kb <- (ad >= 1000 & ad < 5000)
-between.5kb.and.10kb <- (ad >= 5000 & ad < 10000)
-between.10kb.and.100kb <- (ad >= 10000 & ad < 100000)
-more.than.100kb <- (ad >= 100000)
-
-
-p.file <- sub('.csv$','_distances_pie.ps', filename)
-postscript(p.file)
-pie(c("1kb" = sum(within.1kb),
-      "1-5kb" = sum(between.1kb.and.5kb),
-      "5-10kb" = sum(between.5kb.and.10kb),
-      "10-100kb" = sum(between.10kb.and.100kb),
-      ">100kb" = sum(more.than.100kb)
+  
+  my.cols <- colors()[c(5,2)]
+  title = ""
+  
+  p.file <- sub('.csv$',paste('_',ty,'_exonintron_pie.ps', sep=""), filename)
+  postscript(p.file)
+  pie(nms,labels=labels, col=my.cols, main=title)
+  dev.off()
+  
+  p.file <- sub('.csv$',paste('_',ty,'_exonintron_box.ps', sep=""), filename)
+  postscript(p.file)
+  barplot(nms, names.arg=labels, col=my.cols, main=title)
+  dev.off()
+  
+  
+                                        #density distributions and such
+  this.d <- this.dat$distancetoFeature
+  this.ad <- abs(this.d)
+  
+  p.file <- sub('.csv$',paste('_',ty,'_densitydist.ps', sep=""), filename)
+  postscript(p.file)
+  plot(density(this.d), main="Density Distribution of Distances to Nearest Peak")
+  dev.off()
+  
+  p.file <- sub('.csv$',paste('_',ty,'_densitydist_within100k.ps', sep=""), filename)
+  postscript(p.file)
+  plot(density(this.d[this.ad<100000]), main="Density Distribution of Distances to Nearest Peak (within 100kb")
+  dev.off()
+  
+  
+  p.file <- sub('.csv$',paste('_',ty,'_distvFoldEnrich.ps', sep=""), filename)
+  postscript(p.file)
+  plot(this.d, this.dat[,"FoldEnrichment"], pch="+", main="FoldEnrichment vs Distance to Nearest Peak")
+  dev.off()
+  
+  p.file <- sub('.csv$',paste('_',ty,'_distvFoldEnrich_within100k.ps', sep=""), filename)
+  postscript(p.file)
+  plot(this.d[this.ad<100000], this.dat[(this.ad<100000),"FoldEnrichment"], pch="+", main="FoldEnrichment vs Distance to Nearest Peak")
+  dev.off()
+  
+  
+  p.file <- sub('.csv$',paste('_',ty,'_neg10log10pVal.ps', sep=""), filename)
+  postscript(p.file)
+  plot(this.d, this.dat[,"neg10log10pVal"], pch="+", main="-10log10p.val vs Distance to Nearest Peak")
+  dev.off()
+  
+  p.file <- sub('.csv$',paste('_',ty,'_neg10log10pVal_within100k.ps', sep=""), filename)
+  postscript(p.file)
+  plot(this.d[this.ad<100000], this.dat[(this.ad<100000),"neg10log10pVal"], pch="+", main="-10log10p.val vs Distance to Nearest Peak")
+  dev.off()
+  
+  
+  
+                                        #because apparently everyone loves an uninformative pie chart:
+  within.1kb <- (this.ad < 1000)
+  between.1kb.and.5kb <- (this.ad >= 1000 & this.ad < 5000)
+  between.5kb.and.10kb <- (this.ad >= 5000 & this.ad < 10000)
+  between.10kb.and.100kb <- (this.ad >= 10000 & this.ad < 100000)
+  more.than.100kb <- (this.ad >= 100000)
+  
+  p.file <- sub('.csv$',paste('_',ty,'_distances_pie.ps', sep=""), filename)
+  postscript(p.file)
+  pie(c("1kb" = sum(within.1kb),
+        "1-5kb" = sum(between.1kb.and.5kb),
+        "5-10kb" = sum(between.5kb.and.10kb),
+        "10-100kb" = sum(between.10kb.and.100kb),
+        ">100kb" = sum(more.than.100kb)
+        )
       )
-    )
-dev.off()
+  dev.off()
 
-
-
+}
