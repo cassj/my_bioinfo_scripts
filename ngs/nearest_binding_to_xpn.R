@@ -24,12 +24,28 @@ nearest.rd <- function(query, subject ){
     q.iranges <- unlist(ranges(query[sp]))
     s.iranges <- unlist(ranges(subject[sp]))
 
+   #nearest returns a integer vector containing the index of the 
+   #nearest neightbour range in ‘subject’ for each range in ‘x’.
     inds <- nearest(q.iranges, s.iranges)
-    nr <-  as.data.frame(subject[sp][inds,])
+    
+    #retrieve the info about nearest seqs
+    nr <-  as.data.frame(subject[sp])[inds,]
     rownames(nr) <- sub(paste("^",sp,".",sep=""),'',names(q.iranges))
     colnames(nr) <- paste("nearest.", colnames(nr), sep="") 
-    qy <- as.data.frame(query[sp])
-    res[[sp]] <- cbind(qy, nr)
+    this.res <- cbind(as.data.frame(query[sp]),nr)
+
+    #calculate the distance between the tss of the probe target and
+    #the middle of the binding site.
+    mid.bs <- apply(this.res[,c("nearest.start", "nearest.end")],1,mean)
+    mid.bs <- round(mid.bs)
+    genestart<-this.res[,"values.start_position"]
+    inds <- which(this.res[,"values.strand"]==-1)
+    genestart[inds] <- this.res[inds,"values.end_position"]
+    dist.to.genestart<-genestart-mid.bs
+
+    this.res <- cbind(dist.to.genestart,this.res)
+    
+    res[[sp]] <- this.res
   }
   return(res)  
 }

@@ -30,6 +30,6 @@ res <- lapply(names(ranges.rd1), function(x){
        warning(cat("No space '",x, "' in second (subject) ranged data object")) 
      }
      inds <- nearest(ranges.rd1[[x]], ranges.rd2[[x]])
-     ranges.rd2[inds,]
+     nr <- ranges.rd2[[x]][inds,]
    })
 
