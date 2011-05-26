@@ -1,4 +1,4 @@
-#!/usr/bin/Rscript
+#!/usr/local/bin/Rscript
 
 options(stringsAsFactors = FALSE);
 
@@ -10,15 +10,14 @@ qw <- function(...) {
 
 args <- commandArgs(trailingOnly=TRUE)
 filename = args[1]
+
+
+filename <- './EscChIPseqREST_peaks.RangedData.RData'
 rd <- get(load(filename))
 
 library(ChIPpeakAnno)
 library(biomaRt)
 ensmart <- useMart("ensembl", dataset="mmusculus_gene_ensembl")
-
-
-#load mouse transcripts
-data(TSS.mouse.NCBIM37)
 
 #The chromosomes names used in teh NCBIM37 dataset are 1..Y, MT and
 #various NT_***** non-standard chrs. 
@@ -32,88 +31,137 @@ if (length(id)>0){
    names(rd)[id]<-"MT"
 }
 
-#chippeakanno discards anything in values, so hang on to them
-vals <- as.data.frame(rd)
-vals <- vals[,grep("values.", colnames(vals), value=T)]
-colnames(vals) <- gsub('values.','',colnames(vals))
-
 
 # NOTE: TSS.mouse.NCBIM37 is actually *gene* start and end positions,
 # not individual transcripts.
 
 #get the most recent annotation data from ensembl
 tss <- getAnnotation(ensmart, "TSS")
-save(tss, file="tss.RData")
+save(tss, file=paste(dirname(filename),"/tss.RData",sep=""))
 
-#get the nearest start
-nearest.tss <- annotatePeakInBatch(rd,
-                                   AnnotationData=tss,
-                                   PeakLocForDistance = "middle",
-                                   FeatureLocForDistance = "start",
-                                   output = "nearestStart"
-                                   )
+# They will also pull out anything overlapping.
+# Post-process if you only want nearest.
+nearest.tss.start <- annotatePeakInBatch(rd,
+                                         AnnotationData=tss,
+                                         PeakLocForDistance = "middle",    # from the middle of the peak
+                                         FeatureLocForDistance = "start",  # to the start of the feature
+                                         output = "both",
+                                         multiple=TRUE
+                                         )
 
-#and nearest end.
-nearest.tes <- annotatePeakInBatch(rd,
-                                   AnnotationData=tss,
-                                   PeakLocForDistance = "middle",
-                                   FeatureLocForDistance = "end",
-                                   output = "nearestStart")
-                                   
+# the overlapping stuff would be exactly the same,so just get nearest 
+nearest.tss.end <- annotatePeakInBatch(rd,
+                                       AnnotationData=tss,
+                                       PeakLocForDistance = "middle",    # from the middle of the peak
+                                       FeatureLocForDistance = "end",    # to the end of the feature
+                                       output = "nearestStart"
+                                       )
+
+
+
+
 
 #and nearest miRNA
 mirnas <- getAnnotation(ensmart, "miRNA")
-save(mirnas, file="mirna.RData")
-nearest.mirna <- annotatePeakInBatch(rd,
-                                     AnnotationData=mirnas,
-                                     PeakLocForDistance="middle",
-                                     FeatureLocForDistance="middle",
-                                     output ="nearestStart") 
+save(mirnas, file=paste(dirname(filename),"/mirna.RData",sep=""))
+
+nearest.mirna.start <- annotatePeakInBatch(rd,
+                                           AnnotationData=mirnas,
+                                           PeakLocForDistance = "middle",    # from the middle of the peak
+                                           FeatureLocForDistance = "start",  # to the start of the feature
+                                           output = "both",
+                                           multiple=TRUE
+                                         )
+
+nearest.mirna.end <- annotatePeakInBatch(rd,
+                                         AnnotationData=mirnas,
+                                         PeakLocForDistance = "middle",    # from the middle of the peak
+                                         FeatureLocForDistance = "end",    # to the end of the feature
+                                         output = "nearestStart"
+                                         )
 
 
-#and later we'll want to know if it overlaps a coding region?
+
+
+
+
+
+
+#and nearest exon
 exons <- getAnnotation(ensmart, "Exon")
-save(exons, file="exons.RData")
+save(exons, file=paste(dirname(filename),"/exons.RData", sep="" ))
 
-# annotatePeakInBatch is bastard slow, the IRanges findOverlaps function
-# works on RangedData and is much faster
-overlapping.exon <- findOverlaps(rd, exons, type="any", select="arbitrary", drop=TRUE)
-inds <- is.na(overlapping.exon)
-overlapping.exon[inds] <- 0
-overlapping.exon[!inds] <- 1
+nearest.exon.start <- annotatePeakInBatch(rd,
+                                           AnnotationData=exons,
+                                           PeakLocForDistance = "middle",    # from the middle of the peak
+                                           FeatureLocForDistance = "start",  # to the start of the feature
+                                           output = "both",
+                                           multiple=TRUE
+                                         )
+
+nearest.exon.end <- annotatePeakInBatch(rd,
+                                         AnnotationData=exons,
+                                         PeakLocForDistance = "middle",    # from the middle of the peak
+                                         FeatureLocForDistance = "end",    # to the end of the feature
+                                         output = "nearestStart"
+                                         )
 
 
-#for reasons I don't understand, annotatePeakInBatch doesn't return your
-#data in the order you gave it. so, for example rd["1"][1,] is not
-#necessarily nearest.tss["1"][1,]. 
+
+# Save everything
+save(nearest.tss.start, file=paste(dirname(filename),"/nearest_tss_start.RData", sep=""))
+save(nearest.tss.end, file=paste(dirname(filename),"/nearest_tss_end.RData",sep="" ))
+save(nearest.mirna.start,file=paste(dirname(filename),"/nearest_mirna_start.RData", sep="" ))
+save(nearest.mirna.end, file=paste(dirname(filename),"/nearest_mirna_end.RData", sep=""))
+save(nearest.exon.start, file=paste(dirname(filename), "/nearest_exon_start.RData",sep=""))
+save(nearest.exon.end, file=paste(dirname(filename),"/nearest_exon_end.RData", sep=""))
+
+
+# ok, convert everything to dataframes, add values.
+# decide what to do with multiple mappings to peaks at a later stage
+nearest.tss.start.df<-as.data.frame(nearest.tss.start)
+nearest.tss.end.df<-as.data.frame(nearest.tss.end)
+nearest.mirna.start.df<-as.data.frame(nearest.mirna.start)
+nearest.mirna.end.df<-as.data.frame(nearest.mirna.end)
+nearest.exon.start.df<-as.data.frame(nearest.exon.start)
+nearest.exon.end.df<-as.data.frame(nearest.exon.end)
+
+
+#get the rd rownames - these are chr positions.
 rd.df <- as.data.frame(rd)
-ord <- as.character(rd.df$names)
+row.nms <- as.character(rd.df$names)
+rownames(rd.df) <- row.nms
 
-nearest.tss <- as.data.frame(nearest.tss)
-rownames(nearest.tss) <- as.character(nearest.tss$peak)
-nearest.tss <- nearest.tss[ord,]
-nearest.tss <- cbind(nearest.tss,overlapping.exon, vals)
+#stick nearest start and end together into one data frame
+nearest.tss.end.df[,"fromOverlappingOrNearest"] = 'NearestEnd'
+nearest.mirna.end.df[,"fromOverlappingOrNearest"] = 'NearestEnd'
+nearest.exon.end.df[,"fromOverlappingOrNearest"] = 'NearestEnd'
 
-nearest.tes <- as.data.frame(nearest.tes)
-rownames(nearest.tes) <- as.character(nearest.tes$peak)
-nearest.tes <- nearest.tes[ord,]
-nearest.tes <- cbind(nearest.tes, overlapping.exon, vals)
-
-nearest.mirna <- as.data.frame(nearest.mirna)
-rownames(nearest.mirna) <- as.character(nearest.mirna$peak)
-nearest.mirna <- nearest.tes[ord,]
-nearest.mirna <- cbind(nearest.mirna, overlapping.exon, vals)
+nearest.tss <- rbind(nearest.tss.start.df, nearest.tss.end.df)
+nearest.mirna <- rbind(nearest.mirna.start.df, nearest.mirna.end.df)
+nearest.exon <- rbind(nearest.exon.start.df, nearest.exon.end.df)
 
 
+# map nearest data back to original peak data by chromosome position
+req.cols <- c('strand', 'feature', 'start_position', 'end_position', 'insideFeature', 'distancetoFeature', 'shortestDistance', 'fromOverlappingOrNearest')
+
+colnames(nearest.tss) <- paste('tss',colnames(nearest.tss), sep=".")
+colnames(nearest.mirna) <- paste('mirna', colnames(nearest.mirna), sep=".")
+colnames(nearest.exon) <- paste('exon', colnames(nearest.exon), sep=".")
+
+res.tss <-cbind(rd.df[nearest.tss[,"tss.peak"],],nearest.tss[,paste('tss',req.cols,sep=".")])
+res.mirna <-cbind(rd.df[nearest.mirna[,"mirna.peak"],],nearest.mirna[,paste('mirna',req.cols,sep=".")])
+res.exon <-cbind(rd.df[nearest.exon[,"exon.peak"],],nearest.exon[,paste('exon',req.cols,sep=".")])
 
 
 
-#and that only gives you the ensembl gene ID, so get extra info:                
+# Get extra info from the ensembl ids for transcripts / mirnas (feature IDs are gene names)
 filters <- c("ensembl_gene_id")
-values<-unique(c(nearest.tss[,"feature"], nearest.tes[,"feature"]))
+values<-unique(c(res.tss[,"tss.feature"], res.mirna[,"mirna.feature"]))
 attributes <- c("ensembl_gene_id","mgi_symbol", "description")
 
 annot <- getBM(filters=filters, values=values, attributes=attributes, mart=ensmart)
+
 
 #ditch any that don't have a symbol or a description
 no.anno <- intersect(
@@ -135,30 +183,68 @@ for (d in dups){
 annot <- annot[!duplicated( annot[,"ensembl_gene_id"] ), ]
 rownames(annot) <- annot[,"ensembl_gene_id"]
 
-
-#add the annotation to your nearest info
-nearest.tss <- cbind(nearest.tss, annot[nearest.tss[,"feature"],c("mgi_symbol","description")])
-nearest.tss <- cbind(nearest.tss, type="TSS")
-nearest.tes <- cbind(nearest.tes, annot[nearest.tes[,"feature"],c("mgi_symbol","description")])
-nearest.tes <- cbind(nearest.tes, type="TES")
-nearest.mirna <- cbind(nearest.mirna, annot[nearest.mirna[,"feature"], c("mgi_symbol", "description")])
-nearest.mirna <- cbind(nearest.mirna, type="miRNA")
+res.tss <- cbind(res.tss, annot[res.tss[,"tss.feature"],   c("mgi_symbol", "description")])
+res.mirna   <- cbind(res.mirna, annot[res.mirna[,"mirna.feature"],   c("mgi_symbol", "description")])
 
 
-# make a table of nearest overall
-nearest.nearest <- nearest.tss
-smaller <- which( abs(nearest.nearest$distancetoFeature) > abs(nearest.tes$distancetoFeature) )
-nearest.nearest[smaller,] <- nearest.tes[smaller,]
-smaller <- which( abs(nearest.nearest$distancetoFeature) > abs(nearest.mirna$distancetoFeature) )
-nearest.nearest[smaller,] <- nearest.mirna[smaller,]
+# Still need to map the exons to gene IDs. Can't filter on exons, so have to get genes and exons and build lookup
+filters=''
+values<-''
+attributes <- c("ensembl_gene_id","ensembl_exon_id")
+annot <- getBM(filters=filters, values=values, attributes=attributes, mart=ensmart)
+
+rownames(annot) <- annot[,"ensembl_exon_id"]
+res.exon <- cbind(res.exon,ensembl_gene_id=annot[res.exon[,"exon.feature"],"ensembl_gene_id"])
+
+# then get the extra annot from the gene id
+filters <- c("ensembl_gene_id")
+values<-unique(res.exon[,"ensembl_gene_id"])
+attributes <- c("ensembl_gene_id","mgi_symbol", "description")
+annot <- getBM(filters=filters, values=values, attributes=attributes, mart=ensmart)
+
+#ditch any that don't have a symbol or a description
+no.anno <- intersect(
+                     which(annot[,"mgi_symbol"]==""),
+                     which(annot[,"description"]==""))
+annot <- annot[-1*no.anno,]
+
+# a few have multiple bits of annotation
+annot<-cbind(annot, alt.annot="")
+dups<-annot[duplicated(annot[,"ensembl_gene_id"]), "ensembl_gene_id"]
+
+#keep the first on and add all the others as alt.annot 
+for (d in dups){
+  inds <- which(annot[,"ensembl_gene_id"]==d)
+  this.alt.annot <- annot[inds[-1], c("mgi_symbol", "description")]
+  annot[inds[1],"alt.annot"] <- paste(paste(this.alt.annot[,1], this.alt.annot[,2]), collapse="; ")
+}
+annot <- annot[!duplicated( annot[,"ensembl_gene_id"] ), ]
+rownames(annot) <- annot[,"ensembl_gene_id"]
+
+res.exon  <- cbind(res.exon, annot[res.exon[,"ensembl_gene_id"],   c("mgi_symbol", "description")])
+
+#save the results.
+write.csv(res.tss, file=paste(dirname(filename),"/res_tss.csv", sep=""), row.names=F, quote=F)
+write.csv(res.mirna, file=paste(dirname(filename),"/res_mirna.csv", sep=""), row.names=F, quote=F)
+write.csv(res.exon, file=paste(dirname(filename),"/res_exon.csv", sep=""), row.names=F, quote=F)
 
 
-#save the results as csv and rd?
 
-write.csv(nearest.tss, file="nearest_tss.csv", row.names=F)
-write.csv(nearest.tes, file="nearest_tes.csv", row.names=F)
-write.csv(nearest.mirna, file="nearest_mirna.csv", row.names=F)
-write.csv(nearest.nearest, file="nearest_nearest.csv", row.names=F)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
