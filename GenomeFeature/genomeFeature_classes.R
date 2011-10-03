@@ -7,8 +7,6 @@ require(RSQLite)
 #
 #Also in the get.nearest &c functions, we need to deal with the case of
 #a chromosome not being in the database - ie not having been investigated,
-#
-# actually - this will all be resolved in postgres. 
 
 
 #we're likely to have to deal with large lists of
