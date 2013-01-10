@@ -57,7 +57,7 @@ for (i in people){
 for(i in 1:length(people)){
   for(j in 1:length(people)){
        if(data[i,j]==1){
-       iop.graph <- add.edges(iop.graph, c((i-1),(j-1)))
+	iop.graph[i,j]<-TRUE
        }
  }
 }
